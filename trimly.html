@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trimly — Book Your Barber</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --green: #1a9e6e;
+  --green-dark: #0d6e4a;
+  --green-light: #e6f7f1;
+  --green-mid: #a8e0cc;
+  --black: #0f0f0f;
+  --white: #fafaf8;
+  --gray: #6b7280;
+  --gray-light: #f4f4f2;
+  --gray-border: #e5e5e3;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+
+.topbar { position: sticky; top: 0; z-index: 100; background: rgba(250,250,248,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-border); padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--black); letter-spacing: -0.5px; cursor: pointer; }
+.logo span { color: var(--green); }
+.topbar-nav { display: flex; align-items: center; gap: 4px; }
+.nav-btn { padding: 6px 14px; border-radius: 8px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--gray); cursor: pointer; transition: all .15s; }
+.nav-btn:hover { background: var(--gray-light); color: var(--black); }
+.nav-btn.active { background: var(--black); color: white; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.lang-switcher { display: flex; gap: 2px; background: var(--gray-light); border-radius: 8px; padding: 3px; }
+.lang-btn { padding: 4px 10px; border-radius: 6px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; }
+.lang-btn.active { background: white; color: var(--black); box-shadow: var(--shadow); }
+.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 6px; }
+.mobile-nav { display: none; position: fixed; inset: 0; top: 60px; background: white; z-index: 99; padding: 20px; flex-direction: column; gap: 8px; border-top: 1px solid var(--gray-border); }
+.mobile-nav.open { display: flex; }
+.mobile-nav-btn { padding: 12px 16px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; background: transparent; color: var(--black); text-align: left; transition: background .15s; }
+.mobile-nav-btn:hover { background: var(--gray-light); }
+
+.page { display: none; }
+.page.active { display: block; }
+
+.hero { background: var(--black); color: white; padding: 80px 24px 64px; text-align: center; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(26,158,110,0.3) 0%, transparent 70%); pointer-events: none; }
+.hero-tag { display: inline-block; background: rgba(26,158,110,0.2); border: 1px solid rgba(26,158,110,0.4); color: var(--green-mid); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+.hero h1 { font-family: 'DM Serif Display', serif; font-size: clamp(36px, 6vw, 64px); line-height: 1.1; margin-bottom: 16px; letter-spacing: -1px; }
+.hero h1 em { color: var(--green-mid); font-style: italic; }
+.hero p { font-size: clamp(16px, 2vw, 18px); color: rgba(255,255,255,0.65); max-width: 520px; margin: 0 auto 36px; line-height: 1.6; }
+.hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-hero-main { background: var(--green); color: white; border: none; border-radius: 12px; padding: 14px 32px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; }
+.btn-hero-main:hover { background: var(--green-dark); transform: translateY(-1px); }
+.btn-hero-sec { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 14px 32px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; }
+.btn-hero-sec:hover { background: rgba(255,255,255,0.15); }
+.stats-bar { background: var(--green-dark); padding: 16px 24px; display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
+.stat-item { text-align: center; color: white; }
+.stat-item .num { font-family: 'DM Serif Display', serif; font-size: 26px; }
+.stat-item .lbl { font-size: 12px; color: rgba(255,255,255,0.65); }
+.features-section { padding: 64px 24px; max-width: 1100px; margin: 0 auto; }
+.features-section h2 { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 4vw, 40px); text-align: center; margin-bottom: 8px; letter-spacing: -0.5px; }
+.features-section .sub { text-align: center; color: var(--gray); margin-bottom: 48px; font-size: 16px; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.feat-card { background: var(--white); border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 24px; transition: border-color .2s, transform .2s; }
+.feat-card:hover { border-color: var(--green); transform: translateY(-2px); }
+.feat-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--green-light); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.feat-icon svg { width: 22px; height: 22px; stroke: var(--green); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.feat-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.feat-card p { font-size: 14px; color: var(--gray); line-height: 1.6; }
+
+.page-content { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+.page-header { margin-bottom: 28px; }
+.page-header h2 { font-family: 'DM Serif Display', serif; font-size: 32px; letter-spacing: -0.5px; margin-bottom: 4px; }
+.page-header p { color: var(--gray); font-size: 15px; }
+.filters-row { display: flex; gap: 10px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; }
+.search-input-wrap { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 10px; background: white; border: 1px solid var(--gray-border); border-radius: 10px; padding: 10px 14px; }
+.search-input-wrap svg { width: 16px; height: 16px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
+.search-input-wrap input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--black); outline: none; flex: 1; }
+.filter-btn { padding: 10px 16px; border-radius: 10px; border: 1px solid var(--gray-border); background: white; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; color: var(--gray); transition: all .15s; white-space: nowrap; }
+.filter-btn.on { background: var(--black); color: white; border-color: var(--black); }
+.salons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.salon-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .2s, transform .2s; box-shadow: var(--shadow); }
+.salon-card:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.salon-cover { height: 120px; background: var(--black); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.salon-cover svg { width: 36px; height: 36px; stroke: rgba(255,255,255,0.4); fill: none; stroke-width: 1.5; stroke-linecap: round; position: relative; z-index: 1; }
+.salon-open-badge { position: absolute; top: 10px; right: 10px; background: var(--green); color: white; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.salon-body { padding: 16px; }
+.salon-name { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.salon-location { font-size: 13px; color: var(--gray); display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.salon-location svg { width: 12px; height: 12px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
+.salon-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--gray-border); margin-top: 10px; }
+.from-price { font-size: 13px; color: var(--gray); }
+.from-price strong { color: var(--black); font-weight: 600; }
+
+.booking-layout { max-width: 680px; margin: 0 auto; padding: 40px 24px; }
+.back-link { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gray); cursor: pointer; margin-bottom: 28px; width: fit-content; }
+.back-link:hover { color: var(--black); }
+.back-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.step-progress { display: flex; align-items: center; margin-bottom: 32px; }
+.step-node { display: flex; align-items: center; gap: 8px; }
+.step-circle { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border: 1.5px solid var(--gray-border); background: white; color: var(--gray); transition: all .2s; }
+.step-circle.done { background: var(--green); border-color: var(--green); color: white; }
+.step-circle.current { border-color: var(--black); color: var(--black); }
+.step-text { font-size: 13px; color: var(--gray); white-space: nowrap; }
+.step-text.current { color: var(--black); font-weight: 500; }
+.step-connector { flex: 1; height: 1px; background: var(--gray-border); margin: 0 8px; }
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); margin-bottom: 14px; }
+.barber-option { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1.5px solid var(--gray-border); border-radius: var(--radius); cursor: pointer; margin-bottom: 10px; background: white; transition: all .15s; }
+.barber-option:hover { border-color: var(--green); }
+.barber-option.selected { border-color: var(--green); background: var(--green-light); }
+.barber-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 20px; flex-shrink: 0; background: var(--green-light); color: var(--green-dark); }
+.barber-info { flex: 1; }
+.barber-name-text { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+.barber-meta { font-size: 13px; color: var(--gray); }
+.barber-price { font-size: 16px; font-weight: 600; color: var(--green); }
+.chevron { width: 18px; height: 18px; stroke: var(--gray); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.service-option { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1.5px solid var(--gray-border); border-radius: var(--radius); cursor: pointer; margin-bottom: 8px; background: white; transition: all .15s; }
+.service-option:hover { border-color: var(--green); }
+.service-option.selected { border-color: var(--green); background: var(--green-light); }
+.svc-name { font-size: 15px; font-weight: 500; }
+.svc-dur { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.svc-price { font-size: 16px; font-weight: 600; color: var(--green); }
+.date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; scrollbar-width: none; }
+.date-row::-webkit-scrollbar { display: none; }
+.date-chip { min-width: 60px; padding: 10px 6px; text-align: center; border-radius: 10px; border: 1.5px solid var(--gray-border); cursor: pointer; transition: all .15s; flex-shrink: 0; background: white; }
+.date-chip:hover { border-color: var(--green); }
+.date-chip.sel { background: var(--black); border-color: var(--black); color: white; }
+.date-chip .dd { font-size: 11px; opacity: 0.6; }
+.date-chip .dn { font-size: 17px; font-weight: 600; }
+.time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+@media(min-width:500px) { .time-grid { grid-template-columns: repeat(5, 1fr); } }
+.time-chip { padding: 10px 4px; text-align: center; border-radius: 10px; border: 1.5px solid var(--gray-border); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; background: white; color: var(--black); }
+.time-chip:hover { border-color: var(--green); color: var(--green); }
+.time-chip.sel { background: var(--green); border-color: var(--green); color: white; }
+.time-chip.taken { background: var(--gray-light); color: #ccc; text-decoration: line-through; cursor: not-allowed; border-color: transparent; }
+.confirm-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+.confirm-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--gray-border); font-size: 14px; }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-row .label { color: var(--gray); }
+.confirm-row .value { font-weight: 500; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 13px; font-weight: 500; color: var(--gray); margin-bottom: 6px; display: block; }
+.form-field { width: 100%; background: white; border: 1.5px solid var(--gray-border); border-radius: 10px; padding: 11px 14px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--black); outline: none; transition: border-color .15s; }
+.form-field:focus { border-color: var(--green); }
+.btn-main { width: 100%; background: var(--black); color: white; border: none; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background .2s; }
+.btn-main:hover { background: #1a1a1a; }
+.btn-main:disabled { background: var(--gray-light); color: var(--gray); cursor: not-allowed; }
+.btn-main.green { background: var(--green); }
+.btn-main.green:hover { background: var(--green-dark); }
+.btn-secondary { background: transparent; color: var(--black); border: 1.5px solid var(--gray-border); border-radius: 12px; padding: 13px 20px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s; }
+.btn-secondary:hover { border-color: var(--black); }
+.success-screen { text-align: center; padding: 40px 0; }
+.success-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+.success-icon svg { width: 32px; height: 32px; stroke: var(--green); fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.success-title { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 8px; }
+.success-sub { color: var(--gray); margin-bottom: 28px; font-size: 15px; }
+.notif-note { background: var(--green-light); border: 1px solid var(--green-mid); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--green-dark); margin-bottom: 24px; text-align: left; }
+
+.reg-layout { max-width: 700px; margin: 0 auto; padding: 40px 24px; }
+.warning-banner { background: var(--amber-light); border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; margin-bottom: 24px; }
+.warning-banner svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 1px; }
+.warning-banner p { font-size: 13px; color: #78350f; line-height: 1.6; }
+.reg-steps { display: flex; gap: 4px; background: var(--gray-light); border-radius: 10px; padding: 4px; margin-bottom: 28px; }
+.reg-step-btn { flex: 1; padding: 8px 4px; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; text-align: center; }
+.reg-step-btn.active { background: white; color: var(--black); font-weight: 500; box-shadow: var(--shadow); }
+.card-box { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 24px; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width: 480px) { .form-2col { grid-template-columns: 1fr; } }
+.days-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-toggle { padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--gray-border); font-size: 13px; font-weight: 500; cursor: pointer; background: white; color: var(--gray); transition: all .15s; }
+.day-toggle.on { background: var(--black); border-color: var(--black); color: white; }
+.svc-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 20px; padding: 0 4px; transition: color .15s; flex-shrink: 0; }
+.del-btn:hover { color: var(--red); }
+.add-svc-btn { background: none; border: 1.5px dashed var(--gray-border); border-radius: 8px; padding: 10px; width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--gray); cursor: pointer; transition: all .15s; margin-bottom: 20px; }
+.add-svc-btn:hover { border-color: var(--green); color: var(--green); }
+.plan-card { border: 1.5px solid var(--green); border-radius: var(--radius); padding: 20px; background: var(--green-light); margin-bottom: 16px; }
+.plan-price { font-family: 'DM Serif Display', serif; font-size: 36px; margin-bottom: 4px; }
+.plan-price span { font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 400; color: var(--gray); }
+.plan-features { list-style: none; margin: 14px 0; }
+.plan-features li { font-size: 14px; color: var(--gray); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+.contact-box { background: var(--gray-light); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.6; }
+.contact-box strong { color: var(--black); }
+
+.dash-layout { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+.dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.dash-greeting p { color: var(--gray); font-size: 14px; margin-bottom: 4px; }
+.dash-greeting h2 { font-family: 'DM Serif Display', serif; font-size: 28px; letter-spacing: -0.5px; }
+.status-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--green-light); color: var(--green-dark); }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.metric { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 18px; }
+.metric-label { font-size: 12px; color: var(--gray); margin-bottom: 6px; }
+.metric-val { font-family: 'DM Serif Display', serif; font-size: 28px; }
+.metric-change { font-size: 12px; color: var(--green); margin-top: 4px; }
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width: 640px) { .dash-grid { grid-template-columns: 1fr; } }
+.dash-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 20px; }
+.dash-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.appt-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-border); }
+.appt-row:last-child { border-bottom: none; }
+.appt-client { font-size: 14px; font-weight: 500; }
+.appt-time { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.appt-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; }
+.appt-badge.confirmed { background: var(--green-light); color: var(--green-dark); }
+.appt-badge.pending { background: var(--amber-light); color: var(--amber); }
+.appt-badge.cancelled { background: var(--red-light); color: var(--red); }
+
+.admin-layout { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+.admin-tabs { display: flex; gap: 4px; background: var(--gray-light); border-radius: 10px; padding: 4px; margin-bottom: 24px; width: fit-content; }
+.admin-tab { padding: 7px 16px; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; }
+.admin-tab.active { background: white; color: var(--black); font-weight: 500; box-shadow: var(--shadow); }
+.admin-search { display: flex; align-items: center; gap: 10px; background: white; border: 1px solid var(--gray-border); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; }
+.admin-search svg { width: 15px; height: 15px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
+.admin-search input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--black); outline: none; flex: 1; }
+.admin-table { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); overflow: hidden; }
+.admin-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--gray-border); gap: 12px; flex-wrap: wrap; }
+.admin-row:last-child { border-bottom: none; }
+.admin-row-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.admin-row-info p { font-size: 12px; color: var(--gray); }
+.admin-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-approve { background: var(--green); color: white; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.btn-approve:hover { background: var(--green-dark); }
+.btn-suspend { background: transparent; color: var(--amber); border: 1px solid #fcd34d; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.btn-suspend:hover { background: var(--amber-light); }
+.btn-delete { background: transparent; color: var(--red); border: 1px solid #fca5a5; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.btn-delete:hover { background: var(--red-light); }
+.btn-restore { background: transparent; color: var(--gray); border: 1px solid var(--gray-border); border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.status-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.status-pill.active { background: var(--green-light); color: var(--green-dark); }
+.status-pill.pending { background: var(--amber-light); color: var(--amber); }
+.status-pill.deleted { background: var(--gray-light); color: var(--gray); }
+
+.modal-wrap { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+.modal-wrap.show { display: flex; }
+.modal-box { background: white; border-radius: var(--radius); padding: 28px; max-width: 400px; width: 100%; text-align: center; }
+.modal-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--red-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.modal-icon svg { width: 24px; height: 24px; stroke: var(--red); fill: none; stroke-width: 2; stroke-linecap: round; }
+.modal-box h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.modal-box p { font-size: 14px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+.modal-btns { display: flex; gap: 10px; justify-content: center; }
+.divider { height: 1px; background: var(--gray-border); margin: 20px 0; }
+.loading { text-align: center; padding: 40px; color: var(--gray); font-size: 15px; }
+.error-msg { background: var(--red-light); border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 16px; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--black); color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+@media(max-width: 640px) {
+  .topbar { padding: 0 16px; }
+  .topbar-nav { display: none; }
+  .mobile-menu-btn { display: flex; }
+  .page-content, .booking-layout, .reg-layout, .dash-layout, .admin-layout { padding: 24px 16px; }
+  .salons-grid { grid-template-columns: 1fr; }
+  .stats-bar { gap: 24px; }
+  .dash-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <div class="logo" onclick="nav('home')">trim<span>ly</span></div>
+  <div class="topbar-nav">
+    <button class="nav-btn active" id="nb-home" onclick="nav('home')">Home</button>
+    <button class="nav-btn" id="nb-salons" onclick="nav('salons')">Salons</button>
+    <button class="nav-btn" id="nb-barber" onclick="nav('barber')">For barbers</button>
+    <button class="nav-btn" id="nb-dashboard" onclick="nav('dashboard')">Dashboard</button>
+    <!-- Admin button removed from public nav -->
+  </div>
+  <div class="topbar-right">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en',this)">EN</button>
+      <button class="lang-btn" onclick="setLang('az',this)">AZ</button>
+      <button class="lang-btn" onclick="setLang('ru',this)">RU</button>
+    </div>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-btn" onclick="nav('home');toggleMobileMenu()">Home</button>
+  <button class="mobile-nav-btn" onclick="nav('salons');toggleMobileMenu()">Salons</button>
+  <button class="mobile-nav-btn" onclick="nav('barber');toggleMobileMenu()">For barbers</button>
+  <button class="mobile-nav-btn" onclick="nav('dashboard');toggleMobileMenu()">Dashboard</button>
+  <!-- Admin removed from mobile nav -->
+</div>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-tag">Now in Baku, Azerbaijan</div>
+    <h1>Book your next cut<br>in <em>seconds</em></h1>
+    <p>Find verified barbers near you, pick a time that works, and show up. No calls, no waiting.</p>
+    <div class="hero-btns">
+      <button class="btn-hero-main" onclick="nav('salons')">Browse salons</button>
+      <button class="btn-hero-sec" onclick="nav('barber')">I'm a barber</button>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-item"><div class="num" id="stat-salons">—</div><div class="lbl">Active salons</div></div>
+    <div class="stat-item"><div class="num" id="stat-bookings">—</div><div class="lbl">Bookings made</div></div>
+    <div class="stat-item"><div class="num">4.8★</div><div class="lbl">Average rating</div></div>
+  </div>
+  <div class="features-section">
+    <h2>Everything you need, nothing you don't</h2>
+    <p class="sub">Built for barbers in Azerbaijan, designed for everyone.</p>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <h3>Find a barber</h3>
+        <p>Browse verified salons, read real reviews, see portfolios before you book.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <h3>Real-time slots</h3>
+        <p>See live availability. No calls needed — if it's available, it's yours.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3>No account needed</h3>
+        <p>Just your name and phone. Book in under 60 seconds.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <h3>Instant notifications</h3>
+        <p>Barber is notified the moment you book.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SALONS -->
+<div class="page" id="page-salons">
+  <div class="page-content">
+    <div class="page-header">
+      <h2>Salons in Baku</h2>
+      <p>Choose a salon to book your appointment</p>
+    </div>
+    <div class="filters-row">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search salons..." id="salon-search" oninput="filterSalons()">
+      </div>
+    </div>
+    <div class="salons-grid" id="salons-grid"><div class="loading">Loading salons...</div></div>
+  </div>
+</div>
+
+<!-- BOOKING -->
+<div class="page" id="page-booking">
+  <div class="booking-layout">
+    <div class="back-link" onclick="nav('salons')">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      Back to salons
+    </div>
+    <div class="step-progress" id="step-bar"></div>
+    <div id="booking-content"></div>
+  </div>
+</div>
+
+<!-- BARBER REGISTER -->
+<div class="page" id="page-barber">
+  <div class="reg-layout">
+    <div class="page-header">
+      <h2>Join as a barber</h2>
+      <p>Set up your profile and start receiving bookings</p>
+    </div>
+    <div class="warning-banner">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <p>Your profile will only go live after we confirm your first monthly payment. Clients will not see you until you are approved.</p>
+    </div>
+    <div class="reg-steps">
+      <button class="reg-step-btn active" id="rs-profile" onclick="regTab('profile')">Profile</button>
+      <button class="reg-step-btn" id="rs-schedule" onclick="regTab('schedule')">Schedule</button>
+      <button class="reg-step-btn" id="rs-services" onclick="regTab('services')">Services</button>
+      <button class="reg-step-btn" id="rs-payment" onclick="regTab('payment')">Payment</button>
+    </div>
+    <div id="reg-content"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div class="dash-layout">
+    <div class="dash-header">
+      <div class="dash-greeting">
+        <p>Good morning</p>
+        <h2 id="dash-barber-name">Loading...</h2>
+      </div>
+      <span class="status-badge">Active</span>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Today's bookings</div><div class="metric-val" id="dash-today-count">—</div></div>
+      <div class="metric"><div class="metric-label">Total bookings</div><div class="metric-val" id="dash-total-count">—</div></div>
+      <div class="metric"><div class="metric-label">Revenue (AZN)</div><div class="metric-val" id="dash-revenue">—</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <h3>Today's appointments</h3>
+        <div id="dash-appts"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="dash-card">
+        <h3>All bookings</h3>
+        <div id="dash-all-bookings"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div class="admin-layout">
+    <div class="page-header">
+      <h2>Admin panel</h2>
+      <p>Manage barber registrations and subscriptions</p>
+    </div>
+    <div class="metrics" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+      <div class="metric"><div class="metric-label">Active</div><div class="metric-val" id="adm-active">—</div></div>
+      <div class="metric"><div class="metric-label">Pending</div><div class="metric-val" id="adm-pending">—</div></div>
+      <div class="metric"><div class="metric-label">Total bookings</div><div class="metric-val" id="adm-bookings">—</div></div>
+    </div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="at-all" onclick="adminFilter('all')">All</button>
+      <button class="admin-tab" id="at-active" onclick="adminFilter('active')">Active</button>
+      <button class="admin-tab" id="at-pending" onclick="adminFilter('pending')">Pending</button>
+      <button class="admin-tab" id="at-deleted" onclick="adminFilter('deleted')">Deleted</button>
+    </div>
+    <div class="admin-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search by name or salon..." oninput="renderAdmin()">
+    </div>
+    <div class="admin-table" id="admin-table"><div class="loading">Loading...</div></div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-wrap" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
+    <h3 id="modal-title">Delete barber?</h3>
+    <p id="modal-msg">Their salon will be hidden from clients immediately. You can restore them later.</p>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-delete" style="border-radius:12px;padding:10px 20px;font-size:14px" onclick="doDelete()">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE INIT ──
+const SUPABASE_URL = 'https://wipkveitbbnpeyqhmdnk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpcGt2ZWl0YmJucGV5cWhtZG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjM2MDUsImV4cCI6MjA5MjE5OTYwNX0.R_E-UWLdfMVw0pHTGkT97WB8AJnf1ci9tZtyt52uctM';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ──
+let allSalons = [];
+let allBarbers = [];
+let bState = { salon: null, barber: null, barberId: null, service: null, serviceId: null, time: null, date: 0, step: 0 };
+let regServices = [{ n: 'Haircut', p: '10' }, { n: 'Beard trim', p: '5' }];
+let activeDays = ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+let regForm = { name: '', salon: '', city: '', phone: '', specialty: '', about: '' };
+let adminCurrentFilter = 'all';
+let deleteTargetId = null;
+let bookedSlots = [];
+
+const regDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const dates = [
+  { d: 'Mon', n: 21 }, { d: 'Tue', n: 22 }, { d: 'Wed', n: 23 },
+  { d: 'Thu', n: 24 }, { d: 'Fri', n: 25 }, { d: 'Sat', n: 26 }, { d: 'Sun', n: 27 }
+];
+
+// ── TOAST ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── NAV ──
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nb-' + page);
+  if (nb) nb.classList.add('active');
+  window.scrollTo(0, 0);
+  if (page === 'salons') loadSalons();
+  if (page === 'admin') loadAdmin();
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'barber') regTab('profile');
+}
+
+function toggleMobileMenu() {
+  document.getElementById('mobile-nav').classList.toggle('open');
+}
+
+function setLang(l, btn) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── LOAD HOME STATS ──
+async function loadHomeStats() {
+  const { data: salons } = await db.from('salons').select('id').eq('status', 'active');
+  const { data: bookings } = await db.from('bookings').select('id');
+  document.getElementById('stat-salons').textContent = salons?.length || 0;
+  document.getElementById('stat-bookings').textContent = bookings?.length || 0;
+}
+
+// ── SALONS ──
+async function loadSalons() {
+  document.getElementById('salons-grid').innerHTML = '<div class="loading">Loading salons...</div>';
+  const { data, error } = await db.from('salons').select('*, barbers(id, name, services(price))').eq('status', 'active');
+  if (error) { document.getElementById('salons-grid').innerHTML = '<div class="loading">Error loading salons.</div>'; return; }
+  allSalons = data || [];
+  renderSalons();
+}
+
+function filterSalons() { renderSalons(); }
+
+function renderSalons() {
+  const q = (document.getElementById('salon-search')?.value || '').toLowerCase();
+  const filtered = allSalons.filter(s => !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q));
+  const g = document.getElementById('salons-grid');
+  if (!g) return;
+  if (filtered.length === 0) {
+    g.innerHTML = '<p style="color:var(--gray);padding:20px 0">No salons found. Check back soon!</p>';
+    return;
+  }
+  g.innerHTML = filtered.map(s => {
+    const minPrice = s.from_price || '—';
+    const barberCount = s.barbers?.length || 0;
+    return `<div class="salon-card" onclick="startBooking('${s.id}')">
+      <div class="salon-cover" style="background:#1a2a1a">
+        <span class="salon-open-badge">Open</span>
+        <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+      </div>
+      <div class="salon-body">
+        <div class="salon-name">${s.name}</div>
+        <div class="salon-location">
+          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${s.city}
+        </div>
+        <div class="salon-footer">
+          <div class="from-price">From <strong>${minPrice} AZN</strong> · ${barberCount} barber${barberCount !== 1 ? 's' : ''}</div>
+          <div style="font-size:13px;color:var(--gray)">★ ${s.rating || 'New'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── BOOKING ──
+async function startBooking(salonId) {
+  const salon = allSalons.find(s => s.id === salonId);
+  bState = { salon, barber: null, barberId: null, service: null, serviceId: null, time: null, date: 0, step: 0 };
+  nav('booking');
+  await renderBooking();
+}
+
+const stepLabels = ['Barber', 'Service', 'Time', 'Confirm'];
+function renderStepBar() {
+  document.getElementById('step-bar').innerHTML = stepLabels.map((l, i) => {
+    const done = i < bState.step, cur = i === bState.step;
+    return `<div class="step-node">
+      <div class="step-circle ${done ? 'done' : cur ? 'current' : ''}">${done ? '✓' : i + 1}</div>
+      <span class="step-text ${cur ? 'current' : ''}">${l}</span>
+    </div>${i < stepLabels.length - 1 ? '<div class="step-connector"></div>' : ''}`;
+  }).join('');
+}
+
+async function renderBooking() {
+  renderStepBar();
+  const c = document.getElementById('booking-content');
+  const s = bState.salon;
+
+  if (bState.step === 0) {
+    c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div><div class="loading">Loading barbers...</div>`;
+    const { data: barbers } = await db.from('barbers').select('*, services(*)').eq('salon_id', s.id).eq('status', 'active');
+    if (!barbers || barbers.length === 0) {
+      c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div><p style="color:var(--gray)">No barbers available right now.</p>`;
+      return;
+    }
+    c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div>` +
+      barbers.map(b => {
+        const minPrice = b.services?.length ? Math.min(...b.services.map(sv => sv.price)) : '—';
+        return `<div class="barber-option" onclick="pickBarber('${b.id}', '${b.name}', ${JSON.stringify(b.services).replace(/'/g, "&#39;")})">
+          <div class="barber-avatar">${b.name[0]}</div>
+          <div class="barber-info">
+            <div class="barber-name-text">${b.name}</div>
+            <div class="barber-meta">${b.specialty || 'All styles'} · ${(b.work_days || []).join(', ')}</div>
+          </div>
+          <div class="barber-price">from ${minPrice} AZN</div>
+          <svg class="chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        </div>`;
+      }).join('');
+
+  } else if (bState.step === 1) {
+    const { data: services } = await db.from('services').select('*').eq('barber_id', bState.barberId);
+    c.innerHTML = `<div class="section-label">${bState.barber} — Choose a service</div>` +
+      (services || []).map((sv, i) => `<div class="service-option ${bState.serviceId === sv.id ? 'selected' : ''}" onclick="pickService('${sv.id}', '${sv.name}', ${sv.price}, ${sv.duration_minutes})">
+        <div><div class="svc-name">${sv.name}</div><div class="svc-dur">${sv.duration_minutes} min</div></div>
+        <div class="svc-price">${sv.price} AZN</div>
+      </div>`).join('') +
+      `<button class="btn-secondary" style="margin-top:8px" onclick="bState.step=0;renderBooking()">← Back</button>`;
+
+  } else if (bState.step === 2) {
+    const today = new Date();
+    const dateStr = `2026-04-${21 + bState.date}`;
+    const { data: existing } = await db.from('bookings').select('time').eq('barber_id', bState.barberId).eq('date', dateStr).eq('status', 'confirmed');
+    bookedSlots = (existing || []).map(b => b.time);
+    const allTimes = generateTimes('10:00', '22:00', 30);
+    const dateRow = `<div class="date-row">${dates.map((d, i) => `<div class="date-chip ${bState.date === i ? 'sel' : ''}" onclick="bState.date=${i};renderBooking()"><div class="dd">${d.d}</div><div class="dn">${d.n}</div></div>`).join('')}</div>`;
+    const timeGrid = `<div class="time-grid">${allTimes.map(t => `<div class="time-chip ${bookedSlots.includes(t) ? 'taken' : bState.time === t ? 'sel' : ''}" onclick="${bookedSlots.includes(t) ? '' : `pickTime('${t}')`}">${t}</div>`).join('')}</div>`;
+    c.innerHTML = `<div class="section-label">Pick a date & time</div>${dateRow}${timeGrid}<button class="btn-secondary" onclick="bState.step=1;renderBooking()">← Back</button>`;
+
+  } else if (bState.step === 3) {
+    c.innerHTML = `
+      <div class="confirm-card">
+        <div class="confirm-row"><span class="label">Salon</span><span class="value">${s.name}</span></div>
+        <div class="confirm-row"><span class="label">Barber</span><span class="value">${bState.barber}</span></div>
+        <div class="confirm-row"><span class="label">Service</span><span class="value">${bState.service}</span></div>
+        <div class="confirm-row"><span class="label">Time</span><span class="value">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n} Apr</span></div>
+        <div class="confirm-row"><span class="label">Price</span><span class="value" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
+        <div class="confirm-row"><span class="label">Payment</span><span class="value">Cash or card at salon</span></div>
+      </div>
+      <div class="form-group"><label class="form-label">Full name</label><input class="form-field" id="cn" placeholder="e.g. Ali Mammadov"></div>
+      <div class="form-group"><label class="form-label">Phone number</label><input class="form-field" id="cp" placeholder="+994 50 000 00 00" type="tel"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="bState.step=2;renderBooking()">← Back</button>
+        <button class="btn-main green" style="flex:1" onclick="confirmBooking()">Confirm booking</button>
+      </div>`;
+
+  } else if (bState.step === 4) {
+    c.innerHTML = `<div class="success-screen">
+      <div class="success-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="success-title">You're booked!</div>
+      <p class="success-sub">${bState.barber} has been notified. See you soon.</p>
+      <div class="confirm-card" style="text-align:left;margin-bottom:16px">
+        <div class="confirm-row"><span class="label">Salon</span><span class="value">${s.name}</span></div>
+        <div class="confirm-row"><span class="label">Barber</span><span class="value">${bState.barber}</span></div>
+        <div class="confirm-row"><span class="label">Time</span><span class="value">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n} Apr</span></div>
+        <div class="confirm-row" style="border-bottom:none"><span class="label">Price</span><span class="value" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
+      </div>
+      <div class="notif-note">Booking saved. Barber has been notified.</div>
+      <button class="btn-main" onclick="nav('salons')">Back to salons</button>
+    </div>`;
+  }
+}
+
+function generateTimes(start, end, intervalMins) {
+  const times = [];
+  let [h, m] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  while (h < eh || (h === eh && m < em)) {
+    times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    m += intervalMins;
+    if (m >= 60) { h++; m -= 60; }
+  }
+  return times;
+}
+
+function pickBarber(id, name, services) {
+  bState.barberId = id;
+  bState.barber = name;
+  bState.step = 1;
+  renderBooking();
+}
+
+function pickService(id, name, price, dur) {
+  bState.serviceId = id;
+  bState.service = name;
+  bState.servicePrice = price;
+  bState.serviceDur = dur;
+  bState.step = 2;
+  renderBooking();
+}
+
+function pickTime(t) {
+  bState.time = t;
+  bState.step = 3;
+  renderBooking();
+}
+
+async function confirmBooking() {
+  const name = document.getElementById('cn')?.value.trim();
+  const phone = document.getElementById('cp')?.value.trim();
+  if (!name || !phone) { toast('Please fill in your name and phone number.'); return; }
+  const dateStr = `2026-04-${21 + bState.date}`;
+  const btn = document.querySelector('.btn-main.green');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  const { error } = await db.from('bookings').insert({
+    barber_id: bState.barberId,
+    service_id: bState.serviceId,
+    client_name: name,
+    client_phone: phone,
+    date: dateStr,
+    time: bState.time,
+    status: 'confirmed',
+    payment_method: 'cash'
+  });
+  if (error) { toast('Error saving booking. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Confirm booking'; } return; }
+  bState.step = 4;
+  renderBooking();
+}
+
+// ── REGISTER ──
+function regTab(tab) {
+  ['profile', 'schedule', 'services', 'payment'].forEach(t => {
+    document.getElementById('rs-' + t).classList.toggle('active', t === tab);
+  });
+  const c = document.getElementById('reg-content');
+  if (tab === 'profile') {
+    c.innerHTML = `<div class="card-box">
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">Your full name</label><input class="form-field" id="rf-name" placeholder="e.g. Anar Huseynov" value="${regForm.name}"></div>
+        <div class="form-group"><label class="form-label">Salon name</label><input class="form-field" id="rf-salon" placeholder="e.g. Alpha Barbershop" value="${regForm.salon}"></div>
+      </div>
+      <div class="form-group"><label class="form-label">City / district</label><input class="form-field" id="rf-city" placeholder="e.g. Baku, Narimanov district" value="${regForm.city}"></div>
+      <div class="form-group"><label class="form-label">Phone number</label><input class="form-field" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${regForm.phone}"></div>
+      <div class="form-group"><label class="form-label">Your specialty</label><input class="form-field" id="rf-specialty" placeholder="e.g. Fades, classic cuts, beard design" value="${regForm.specialty}"></div>
+      <div class="form-group"><label class="form-label">About you (optional)</label><textarea class="form-field" id="rf-about" rows="3" placeholder="Tell clients about your experience...">${regForm.about}</textarea></div>
+      <button class="btn-main" onclick="saveProfileAndContinue()">Save & continue →</button>
+    </div>`;
+  } else if (tab === 'schedule') {
+    c.innerHTML = `<div class="card-box">
+      <div class="form-group">
+        <label class="form-label">Working days</label>
+        <div class="days-wrap">${regDays.map(d => `<button class="day-toggle ${activeDays.includes(d) ? 'on' : ''}" onclick="toggleDay('${d}',this)">${d}</button>`).join('')}</div>
+      </div>
+      <div class="form-2col" style="margin-top:16px">
+        <div class="form-group"><label class="form-label">Opening time</label>
+          <select class="form-field" id="rf-start">${['08:00','09:00','10:00','11:00'].map(t => `<option>${t}</option>`).join('')}</select>
+        </div>
+        <div class="form-group"><label class="form-label">Closing time</label>
+          <select class="form-field" id="rf-end">${['18:00','19:00','20:00','21:00','22:00'].map(t => `<option ${t==='22:00'?'selected':''}>${t}</option>`).join('')}</select>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6">System auto-generates 30-minute slots. You can block dates later.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="regTab('profile')">← Back</button>
+        <button class="btn-main" style="flex:1" onclick="regTab('services')">Save & continue →</button>
+      </div>
+    </div>`;
+  } else if (tab === 'services') {
+    c.innerHTML = `<div class="card-box">
+      <p style="font-size:14px;color:var(--gray);margin-bottom:16px">Add your services and prices. Clients will see these when booking you.</p>
+      <div id="svc-list">${regServices.map((s, i) => `<div class="svc-row">
+        <input class="form-field" value="${s.n}" placeholder="Service name" onchange="regServices[${i}].n=this.value" style="flex:2">
+        <input class="form-field" value="${s.p}" placeholder="AZN" type="number" min="1" onchange="regServices[${i}].p=this.value" style="flex:1">
+        <button class="del-btn" onclick="regServices.splice(${i},1);regTab('services')">×</button>
+      </div>`).join('')}</div>
+      <button class="add-svc-btn" onclick="regServices.push({n:'',p:''});regTab('services')">+ Add service</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="regTab('schedule')">← Back</button>
+        <button class="btn-main" style="flex:1" onclick="regTab('payment')">Save & continue →</button>
+      </div>
+    </div>`;
+  } else if (tab === 'payment') {
+    c.innerHTML = `<div class="card-box">
+      <div class="plan-card">
+        <div class="plan-price">__ AZN <span>/ month</span></div>
+        <p style="font-size:14px;color:var(--gray)">Monthly subscription · cancel anytime</p>
+        <ul class="plan-features">
+          <li>Unlimited bookings</li>
+          <li>Real-time notifications</li>
+          <li>Client management dashboard</li>
+          <li>Analytics & revenue tracking</li>
+        </ul>
+      </div>
+      <div class="contact-box">
+        After submitting, contact us to activate your account:<br><br>
+        <strong>WhatsApp / Call: +994 XX XXX XX XX</strong><br>
+        Profile goes live within 24 hours of payment confirmation.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="regTab('services')">← Back</button>
+        <button class="btn-main green" style="flex:1" onclick="submitRegistration()">Submit registration</button>
+      </div>
+    </div>`;
+  }
+}
+
+function saveProfileAndContinue() {
+  regForm.name = document.getElementById('rf-name')?.value || '';
+  regForm.salon = document.getElementById('rf-salon')?.value || '';
+  regForm.city = document.getElementById('rf-city')?.value || '';
+  regForm.phone = document.getElementById('rf-phone')?.value || '';
+  regForm.specialty = document.getElementById('rf-specialty')?.value || '';
+  regForm.about = document.getElementById('rf-about')?.value || '';
+  if (!regForm.name || !regForm.salon || !regForm.city || !regForm.phone) {
+    toast('Please fill in all required fields.');
+    return;
+  }
+  regTab('schedule');
+}
+
+async function submitRegistration() {
+  if (!regForm.name || !regForm.salon) { toast('Please complete your profile first.'); regTab('profile'); return; }
+  const btn = document.querySelector('#page-barber .btn-main.green');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+  const { data: salonData, error: salonError } = await db.from('salons').insert({
+    name: regForm.salon, city: regForm.city, phone: regForm.phone,
+    about: regForm.about, status: 'pending', from_price: Math.min(...regServices.map(s => parseFloat(s.p) || 0))
+  }).select().single();
+  if (salonError) { toast('Error submitting. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Submit registration'; } return; }
+  const { data: barberData, error: barberError } = await db.from('barbers').insert({
+    salon_id: salonData.id, name: regForm.name, specialty: regForm.specialty,
+    work_days: activeDays, start_time: '10:00', end_time: '22:00',
+    buffer_minutes: 10, status: 'pending'
+  }).select().single();
+  if (barberError) { toast('Error saving barber. Please try again.'); return; }
+  if (regServices.length > 0) {
+    await db.from('services').insert(regServices.filter(s => s.n && s.p).map(s => ({
+      barber_id: barberData.id, name: s.n,
+      price: parseFloat(s.p), duration_minutes: 30
+    })));
+  }
+  toast('Registration submitted! We will contact you within 24 hours.');
+  regForm = { name: '', salon: '', city: '', phone: '', specialty: '', about: '' };
+  regServices = [{ n: 'Haircut', p: '10' }];
+  regTab('profile');
+}
+
+function toggleDay(d, btn) {
+  const i = activeDays.indexOf(d);
+  if (i > -1) { activeDays.splice(i, 1); btn.classList.remove('on'); }
+  else { activeDays.push(d); btn.classList.add('on'); }
+}
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  const { data: barbers } = await db.from('barbers').select('*').eq('status', 'active').limit(1);
+  if (!barbers || barbers.length === 0) {
+    document.getElementById('dash-barber-name').textContent = 'No active barbers';
+    return;
+  }
+  const barber = barbers[0];
+  document.getElementById('dash-barber-name').textContent = barber.name;
+  const today = new Date().toISOString().split('T')[0];
+  const { data: todayBookings } = await db.from('bookings').select('*, services(name, price)').eq('barber_id', barber.id).eq('date', today);
+  const { data: allBookings } = await db.from('bookings').select('*, services(name, price)').eq('barber_id', barber.id).order('date', { ascending: false }).limit(20);
+  const revenue = (allBookings || []).reduce((sum, b) => sum + (b.services?.price || 0), 0);
+  document.getElementById('dash-today-count').textContent = todayBookings?.length || 0;
+  document.getElementById('dash-total-count').textContent = allBookings?.length || 0;
+  document.getElementById('dash-revenue').textContent = revenue;
+  const apptEl = document.getElementById('dash-appts');
+  if (!todayBookings || todayBookings.length === 0) {
+    apptEl.innerHTML = '<p style="color:var(--gray);font-size:14px">No appointments today.</p>';
+  } else {
+    apptEl.innerHTML = todayBookings.map(b => `<div class="appt-row">
+      <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.time} · ${b.services?.name || '—'}</div></div>
+      <span class="appt-badge confirmed">Confirmed</span>
+    </div>`).join('');
+  }
+  const allEl = document.getElementById('dash-all-bookings');
+  if (!allBookings || allBookings.length === 0) {
+    allEl.innerHTML = '<p style="color:var(--gray);font-size:14px">No bookings yet.</p>';
+  } else {
+    allEl.innerHTML = allBookings.map(b => `<div class="appt-row">
+      <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.date} · ${b.time}</div></div>
+      <span class="appt-badge confirmed">${b.services?.price || 0} AZN</span>
+    </div>`).join('');
+  }
+}
+
+// ── ADMIN ──
+async function loadAdmin() {
+  const { data: barbers } = await db.from('barbers').select('*, salons(name, city)');
+  const { data: bookings } = await db.from('bookings').select('id');
+  allBarbers = barbers || [];
+  document.getElementById('adm-active').textContent = allBarbers.filter(b => b.status === 'active').length;
+  document.getElementById('adm-pending').textContent = allBarbers.filter(b => b.status === 'pending').length;
+  document.getElementById('adm-bookings').textContent = bookings?.length || 0;
+  renderAdmin();
+}
+
+function adminFilter(f) {
+  adminCurrentFilter = f;
+  ['all', 'active', 'pending', 'deleted'].forEach(t => document.getElementById('at-' + t).classList.toggle('active', t === f));
+  renderAdmin();
+}
+
+function renderAdmin() {
+  const q = (document.querySelector('.admin-search input')?.value || '').toLowerCase();
+  let list = allBarbers.filter(b => {
+    const mf = adminCurrentFilter === 'all' ? b.status !== 'deleted' : b.status === adminCurrentFilter;
+    const ms = !q || b.name.toLowerCase().includes(q) || (b.salons?.name || '').toLowerCase().includes(q);
+    return mf && ms;
+  });
+  const t = document.getElementById('admin-table');
+  if (!t) return;
+  if (list.length === 0) { t.innerHTML = '<p style="padding:20px;color:var(--gray);text-align:center">No barbers found.</p>'; return; }
+  t.innerHTML = list.map(b => `<div class="admin-row">
+    <div class="admin-row-info">
+      <h4>${b.name}</h4>
+      <p>${b.salons?.name || '—'} · ${b.salons?.city || '—'} · Joined ${b.created_at?.split('T')[0] || '—'}</p>
+    </div>
+    <div class="admin-actions">
+      <span class="status-pill ${b.status}">${b.status.charAt(0).toUpperCase() + b.status.slice(1)}</span>
+      ${b.status === 'pending' ? `<button class="btn-approve" onclick="adminApprove('${b.id}', '${b.salon_id}')">Approve</button>` : ''}
+      ${b.status === 'active' ? `<button class="btn-suspend" onclick="adminSuspend('${b.id}', '${b.salon_id}')">Suspend</button>` : ''}
+      ${b.status !== 'deleted' ? `<button class="btn-delete" onclick="showDeleteModal('${b.id}')">Delete</button>` : `<button class="btn-restore" onclick="adminRestore('${b.id}', '${b.salon_id}')">Restore</button>`}
+    </div>
+  </div>`).join('');
+}
+
+async function adminApprove(barberId, salonId) {
+  await db.from('barbers').update({ status: 'active' }).eq('id', barberId);
+  await db.from('salons').update({ status: 'active' }).eq('id', salonId);
+  toast('Barber approved and now live!');
+  loadAdmin();
+}
+
+async function adminSuspend(barberId, salonId) {
+  await db.from('barbers').update({ status: 'pending' }).eq('id', barberId);
+  await db.from('salons').update({ status: 'pending' }).eq('id', salonId);
+  toast('Barber suspended.');
+  loadAdmin();
+}
+
+async function adminRestore(barberId, salonId) {
+  await db.from('barbers').update({ status: 'active' }).eq('id', barberId);
+  await db.from('salons').update({ status: 'active' }).eq('id', salonId);
+  toast('Barber restored and live!');
+  loadAdmin();
+}
+
+function showDeleteModal(id) {
+  deleteTargetId = id;
+  const b = allBarbers.find(x => x.id === id);
+  document.getElementById('modal-title').textContent = `Delete ${b?.name}?`;
+  document.getElementById('delete-modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('delete-modal').classList.remove('show'); }
+
+async function doDelete() {
+  await db.from('barbers').update({ status: 'deleted' }).eq('id', deleteTargetId);
+  closeModal();
+  toast('Barber deleted.');
+  loadAdmin();
+}
+
+// ── INIT ──
+// This runs as soon as the page loads.
+loadHomeStats();
+regTab('profile');
+
+// ── SECRET ADMIN ACCESS ──
+// The hash is the part of the URL after the # symbol.
+// Example: yoursite.com#admin-trimly2026
+// We check the hash every time the page loads AND every time
+// the hash changes (in case someone types it in while on the site).
+
+const SECRET_HASH = '#admin-trimly2026'; // Change this to whatever you want
+
+function checkAdminAccess() {
+  if (window.location.hash === SECRET_HASH) {
+    // Hash matches — show admin page
+    nav('admin');
+    // Clear the hash from the URL so it's not visible in the address bar
+    // after the page loads. Keeps it cleaner.
+    history.replaceState(null, '', window.location.pathname);
+  }
+}
+
+// Check on page load
+checkAdminAccess();
+
+// Also check if hash changes while user is on the site
+window.addEventListener('hashchange', checkAdminAccess);
+</script>
+</body>
+</html>
