@@ -3,263 +3,327 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trimly — Book Your Barber</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Trimly — Book Your Barber in Baku</title>
+<meta name="description" content="Find and book the best barbers in Baku, Azerbaijan. Real-time slots, instant confirmation, no account needed.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ============================================================
+   TRIMLY v1.0.3 — FULL STYLESHEET
+   Sections: Variables → Reset → Topbar → Pages →
+   Home → Barbers → Booking → Register → Login →
+   Dashboard → Admin → Modals → Utilities → Responsive
+   ============================================================ */
+
 :root {
-  --green: #1a9e6e;
-  --green-dark: #0d6e4a;
-  --green-light: #e6f7f1;
-  --green-mid: #a8e0cc;
-  --black: #0f0f0f;
-  --white: #fafaf8;
-  --gray: #6b7280;
-  --gray-light: #f4f4f2;
-  --gray-border: #e5e5e3;
-  --red: #dc2626;
-  --red-light: #fef2f2;
-  --amber: #d97706;
-  --amber-light: #fffbeb;
-  --radius: 14px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --green:#1a9e6e; --green-dark:#0d6e4a; --green-light:#e6f7f1; --green-mid:#a8e0cc;
+  --black:#0f0f0f; --white:#fafaf8; --gray:#6b7280;
+  --gray-light:#f4f4f2; --gray-border:#e5e5e3;
+  --red:#dc2626; --red-light:#fef2f2;
+  --amber:#d97706; --amber-light:#fffbeb;
+  --gold:#f59e0b;
+  --radius:14px; --radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:0 4px 16px rgba(0,0,0,0.12);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--white);color:var(--black);min-height:100vh;font-size:15px;line-height:1.6}
+button{font-family:'DM Sans',sans-serif}
+input,textarea,select{font-family:'DM Sans',sans-serif}
 
-.topbar { position: sticky; top: 0; z-index: 100; background: rgba(250,250,248,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-border); padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
-.logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--black); letter-spacing: -0.5px; cursor: pointer; }
-.logo span { color: var(--green); }
-.topbar-nav { display: flex; align-items: center; gap: 4px; }
-.nav-btn { padding: 6px 14px; border-radius: 8px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--gray); cursor: pointer; transition: all .15s; }
-.nav-btn:hover { background: var(--gray-light); color: var(--black); }
-.nav-btn.active { background: var(--black); color: white; }
-.topbar-right { display: flex; align-items: center; gap: 8px; }
-.lang-switcher { display: flex; gap: 2px; background: var(--gray-light); border-radius: 8px; padding: 3px; }
-.lang-btn { padding: 4px 10px; border-radius: 6px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; }
-.lang-btn.active { background: white; color: var(--black); box-shadow: var(--shadow); }
-.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 6px; }
-.mobile-nav { display: none; position: fixed; inset: 0; top: 60px; background: white; z-index: 99; padding: 20px; flex-direction: column; gap: 8px; border-top: 1px solid var(--gray-border); }
-.mobile-nav.open { display: flex; }
-.mobile-nav-btn { padding: 12px 16px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; background: transparent; color: var(--black); text-align: left; transition: background .15s; }
-.mobile-nav-btn:hover { background: var(--gray-light); }
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(250,250,248,0.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--gray-border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'DM Serif Display',serif;font-size:22px;color:var(--black);cursor:pointer;letter-spacing:-0.5px;user-select:none}
+.logo span{color:var(--green)}
+.topbar-nav{display:flex;align-items:center;gap:2px}
+.nav-btn{padding:6px 13px;border-radius:8px;border:none;background:transparent;font-size:14px;color:var(--gray);cursor:pointer;transition:all .15s}
+.nav-btn:hover{background:var(--gray-light);color:var(--black)}
+.nav-btn.active{background:var(--black);color:white}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.lang-switcher{display:flex;gap:2px;background:var(--gray-light);border-radius:8px;padding:3px}
+.lang-btn{padding:4px 10px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;background:transparent;color:var(--gray);transition:all .15s}
+.lang-btn.active{background:white;color:var(--black);box-shadow:var(--shadow)}
+.mobile-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px}
+.mobile-nav{display:none;position:fixed;inset:0;top:60px;background:white;z-index:99;padding:20px;flex-direction:column;gap:8px;border-top:1px solid var(--gray-border);overflow-y:auto}
+.mobile-nav.open{display:flex}
+.mobile-nav-btn{padding:12px 16px;border-radius:10px;border:none;font-size:15px;cursor:pointer;background:transparent;color:var(--black);text-align:left;transition:background .15s}
+.mobile-nav-btn:hover{background:var(--gray-light)}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--green-light);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:500;color:var(--green-dark);cursor:pointer;border:none}
+.user-pill svg{width:14px;height:14px;stroke:var(--green-dark);fill:none;stroke-width:2}
 
-.page { display: none; }
-.page.active { display: block; }
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
 
-.hero { background: var(--black); color: white; padding: 80px 24px 64px; text-align: center; position: relative; overflow: hidden; }
-.hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(26,158,110,0.3) 0%, transparent 70%); pointer-events: none; }
-.hero-tag { display: inline-block; background: rgba(26,158,110,0.2); border: 1px solid rgba(26,158,110,0.4); color: var(--green-mid); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
-.hero h1 { font-family: 'DM Serif Display', serif; font-size: clamp(36px, 6vw, 64px); line-height: 1.1; margin-bottom: 16px; letter-spacing: -1px; }
-.hero h1 em { color: var(--green-mid); font-style: italic; }
-.hero p { font-size: clamp(16px, 2vw, 18px); color: rgba(255,255,255,0.65); max-width: 520px; margin: 0 auto 36px; line-height: 1.6; }
-.hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.btn-hero-main { background: var(--green); color: white; border: none; border-radius: 12px; padding: 14px 32px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; }
-.btn-hero-main:hover { background: var(--green-dark); transform: translateY(-1px); }
-.btn-hero-sec { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 14px 32px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; }
-.btn-hero-sec:hover { background: rgba(255,255,255,0.15); }
-.stats-bar { background: var(--green-dark); padding: 16px 24px; display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
-.stat-item { text-align: center; color: white; }
-.stat-item .num { font-family: 'DM Serif Display', serif; font-size: 26px; }
-.stat-item .lbl { font-size: 12px; color: rgba(255,255,255,0.65); }
-.features-section { padding: 64px 24px; max-width: 1100px; margin: 0 auto; }
-.features-section h2 { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 4vw, 40px); text-align: center; margin-bottom: 8px; letter-spacing: -0.5px; }
-.features-section .sub { text-align: center; color: var(--gray); margin-bottom: 48px; font-size: 16px; }
-.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-.feat-card { background: var(--white); border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 24px; transition: border-color .2s, transform .2s; }
-.feat-card:hover { border-color: var(--green); transform: translateY(-2px); }
-.feat-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--green-light); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-.feat-icon svg { width: 22px; height: 22px; stroke: var(--green); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.feat-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-.feat-card p { font-size: 14px; color: var(--gray); line-height: 1.6; }
+/* HOME */
+.hero{background:var(--black);color:white;padding:80px 24px 56px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 100%,rgba(26,158,110,0.28) 0%,transparent 70%);pointer-events:none}
+.hero-tag{display:inline-block;background:rgba(26,158,110,0.2);border:1px solid rgba(26,158,110,0.35);color:var(--green-mid);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:20px;letter-spacing:0.08em;text-transform:uppercase}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(36px,6vw,64px);line-height:1.1;margin-bottom:16px;letter-spacing:-1px}
+.hero h1 em{color:var(--green-mid);font-style:italic}
+.hero p{font-size:clamp(15px,2vw,17px);color:rgba(255,255,255,0.6);max-width:500px;margin:0 auto 32px;line-height:1.7}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+.btn-hero-main{background:var(--green);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:15px;font-weight:500;cursor:pointer;transition:all .2s}
+.btn-hero-main:hover{background:var(--green-dark);transform:translateY(-1px)}
+.btn-hero-sec{background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.18);border-radius:12px;padding:14px 32px;font-size:15px;font-weight:500;cursor:pointer;transition:all .2s}
+.btn-hero-sec:hover{background:rgba(255,255,255,0.14)}
+.urgent-wrap{display:flex;justify-content:center}
+.urgent-btn{background:transparent;color:#fbbf24;border:1px solid rgba(251,191,36,0.35);border-radius:12px;padding:11px 24px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.urgent-btn:hover{background:rgba(251,191,36,0.08)}
+.urgent-dot{width:7px;height:7px;border-radius:50%;background:#fbbf24;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.stats-bar{background:var(--green-dark);padding:18px 24px;display:flex;justify-content:center;gap:56px;flex-wrap:wrap}
+.stat-item{text-align:center;color:white}
+.stat-num{font-family:'DM Serif Display',serif;font-size:28px}
+.stat-lbl{font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px}
+.features-section{padding:64px 24px;max-width:1100px;margin:0 auto}
+.features-section h2{font-family:'DM Serif Display',serif;font-size:clamp(26px,4vw,38px);text-align:center;margin-bottom:8px;letter-spacing:-0.5px}
+.f-sub{text-align:center;color:var(--gray);margin-bottom:44px;font-size:16px}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
+.feat-card{background:var(--white);border:1px solid var(--gray-border);border-radius:var(--radius);padding:22px;transition:border-color .2s,transform .2s}
+.feat-card:hover{border-color:var(--green);transform:translateY(-2px)}
+.feat-icon{width:42px;height:42px;border-radius:10px;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.feat-icon svg{width:20px;height:20px;stroke:var(--green);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.feat-card h3{font-size:15px;font-weight:600;margin-bottom:5px}
+.feat-card p{font-size:13px;color:var(--gray);line-height:1.6}
 
-.page-content { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
-.page-header { margin-bottom: 28px; }
-.page-header h2 { font-family: 'DM Serif Display', serif; font-size: 32px; letter-spacing: -0.5px; margin-bottom: 4px; }
-.page-header p { color: var(--gray); font-size: 15px; }
-.filters-row { display: flex; gap: 10px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; }
-.search-input-wrap { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 10px; background: white; border: 1px solid var(--gray-border); border-radius: 10px; padding: 10px 14px; }
-.search-input-wrap svg { width: 16px; height: 16px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
-.search-input-wrap input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--black); outline: none; flex: 1; }
-.filter-btn { padding: 10px 16px; border-radius: 10px; border: 1px solid var(--gray-border); background: white; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; color: var(--gray); transition: all .15s; white-space: nowrap; }
-.filter-btn.on { background: var(--black); color: white; border-color: var(--black); }
-.salons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-.salon-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .2s, transform .2s; box-shadow: var(--shadow); }
-.salon-card:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.salon-cover { height: 120px; background: var(--black); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.salon-cover svg { width: 36px; height: 36px; stroke: rgba(255,255,255,0.4); fill: none; stroke-width: 1.5; stroke-linecap: round; position: relative; z-index: 1; }
-.salon-open-badge { position: absolute; top: 10px; right: 10px; background: var(--green); color: white; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
-.salon-body { padding: 16px; }
-.salon-name { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
-.salon-location { font-size: 13px; color: var(--gray); display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
-.salon-location svg { width: 12px; height: 12px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
-.salon-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--gray-border); margin-top: 10px; }
-.from-price { font-size: 13px; color: var(--gray); }
-.from-price strong { color: var(--black); font-weight: 600; }
+/* BARBERS PAGE */
+.page-content{max-width:1100px;margin:0 auto;padding:40px 24px}
+.page-header{margin-bottom:24px}
+.page-header h2{font-family:'DM Serif Display',serif;font-size:30px;letter-spacing:-0.5px;margin-bottom:4px}
+.page-header p{color:var(--gray);font-size:14px}
+.filters-row{display:flex;gap:10px;margin-bottom:22px;align-items:center;flex-wrap:wrap}
+.search-wrap{flex:1;min-width:180px;display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--gray-border);border-radius:10px;padding:10px 14px}
+.search-wrap svg{width:15px;height:15px;stroke:var(--gray);fill:none;stroke-width:2;flex-shrink:0}
+.search-wrap input{border:none;background:transparent;font-size:14px;color:var(--black);outline:none;flex:1}
+.filter-btn{padding:9px 15px;border-radius:10px;border:1px solid var(--gray-border);background:white;font-size:13px;cursor:pointer;color:var(--gray);transition:all .15s;white-space:nowrap}
+.filter-btn.on{background:var(--black);color:white;border-color:var(--black)}
+.barbers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.barber-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .2s;box-shadow:var(--shadow)}
+.barber-card:hover{border-color:var(--green);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.bc-photo{height:130px;background:linear-gradient(135deg,#1a2a1a,#0d3d28);display:flex;align-items:center;justify-content:center;position:relative;font-family:'DM Serif Display',serif;font-size:52px;color:rgba(255,255,255,0.25);overflow:hidden}
+.bc-photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.rank-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);color:var(--gold);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid rgba(245,158,11,0.3);backdrop-filter:blur(4px)}
+.rank-1{background:rgba(245,158,11,0.2);border-color:var(--gold);color:var(--gold)}
+.bc-body{padding:14px}
+.bc-name{font-size:17px;font-weight:600;margin-bottom:3px}
+.bc-salon{font-size:13px;color:var(--green);margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.bc-salon svg{width:11px;height:11px;stroke:var(--green);fill:none;stroke-width:2;flex-shrink:0}
+.bc-specialty{font-size:12px;color:var(--gray);margin-bottom:10px}
+.bc-footer{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--gray-border)}
+.bc-rating{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--gray)}
+.bc-rating .star{color:var(--gold)}
+.bc-price{font-size:14px;font-weight:600;color:var(--green)}
+.map-btn{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--green);cursor:pointer;background:none;border:none;padding:0;text-decoration:none;transition:opacity .15s}
+.map-btn:hover{opacity:.7}
+.map-btn svg{width:11px;height:11px;stroke:var(--green);fill:none;stroke-width:2}
 
-.booking-layout { max-width: 680px; margin: 0 auto; padding: 40px 24px; }
-.back-link { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gray); cursor: pointer; margin-bottom: 28px; width: fit-content; }
-.back-link:hover { color: var(--black); }
-.back-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
-.step-progress { display: flex; align-items: center; margin-bottom: 32px; }
-.step-node { display: flex; align-items: center; gap: 8px; }
-.step-circle { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border: 1.5px solid var(--gray-border); background: white; color: var(--gray); transition: all .2s; }
-.step-circle.done { background: var(--green); border-color: var(--green); color: white; }
-.step-circle.current { border-color: var(--black); color: var(--black); }
-.step-text { font-size: 13px; color: var(--gray); white-space: nowrap; }
-.step-text.current { color: var(--black); font-weight: 500; }
-.step-connector { flex: 1; height: 1px; background: var(--gray-border); margin: 0 8px; }
-.section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); margin-bottom: 14px; }
-.barber-option { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1.5px solid var(--gray-border); border-radius: var(--radius); cursor: pointer; margin-bottom: 10px; background: white; transition: all .15s; }
-.barber-option:hover { border-color: var(--green); }
-.barber-option.selected { border-color: var(--green); background: var(--green-light); }
-.barber-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 20px; flex-shrink: 0; background: var(--green-light); color: var(--green-dark); }
-.barber-info { flex: 1; }
-.barber-name-text { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
-.barber-meta { font-size: 13px; color: var(--gray); }
-.barber-price { font-size: 16px; font-weight: 600; color: var(--green); }
-.chevron { width: 18px; height: 18px; stroke: var(--gray); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.service-option { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1.5px solid var(--gray-border); border-radius: var(--radius); cursor: pointer; margin-bottom: 8px; background: white; transition: all .15s; }
-.service-option:hover { border-color: var(--green); }
-.service-option.selected { border-color: var(--green); background: var(--green-light); }
-.svc-name { font-size: 15px; font-weight: 500; }
-.svc-dur { font-size: 12px; color: var(--gray); margin-top: 2px; }
-.svc-price { font-size: 16px; font-weight: 600; color: var(--green); }
-.date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; scrollbar-width: none; }
-.date-row::-webkit-scrollbar { display: none; }
-.date-chip { min-width: 60px; padding: 10px 6px; text-align: center; border-radius: 10px; border: 1.5px solid var(--gray-border); cursor: pointer; transition: all .15s; flex-shrink: 0; background: white; }
-.date-chip:hover { border-color: var(--green); }
-.date-chip.sel { background: var(--black); border-color: var(--black); color: white; }
-.date-chip .dd { font-size: 11px; opacity: 0.6; }
-.date-chip .dn { font-size: 17px; font-weight: 600; }
-.time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-@media(min-width:500px) { .time-grid { grid-template-columns: repeat(5, 1fr); } }
-.time-chip { padding: 10px 4px; text-align: center; border-radius: 10px; border: 1.5px solid var(--gray-border); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; background: white; color: var(--black); }
-.time-chip:hover { border-color: var(--green); color: var(--green); }
-.time-chip.sel { background: var(--green); border-color: var(--green); color: white; }
-.time-chip.taken { background: var(--gray-light); color: #ccc; text-decoration: line-through; cursor: not-allowed; border-color: transparent; }
-.confirm-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
-.confirm-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--gray-border); font-size: 14px; }
-.confirm-row:last-child { border-bottom: none; }
-.confirm-row .label { color: var(--gray); }
-.confirm-row .value { font-weight: 500; }
-.form-group { margin-bottom: 14px; }
-.form-label { font-size: 13px; font-weight: 500; color: var(--gray); margin-bottom: 6px; display: block; }
-.form-field { width: 100%; background: white; border: 1.5px solid var(--gray-border); border-radius: 10px; padding: 11px 14px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--black); outline: none; transition: border-color .15s; }
-.form-field:focus { border-color: var(--green); }
-.btn-main { width: 100%; background: var(--black); color: white; border: none; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background .2s; }
-.btn-main:hover { background: #1a1a1a; }
-.btn-main:disabled { background: var(--gray-light); color: var(--gray); cursor: not-allowed; }
-.btn-main.green { background: var(--green); }
-.btn-main.green:hover { background: var(--green-dark); }
-.btn-secondary { background: transparent; color: var(--black); border: 1.5px solid var(--gray-border); border-radius: 12px; padding: 13px 20px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s; }
-.btn-secondary:hover { border-color: var(--black); }
-.success-screen { text-align: center; padding: 40px 0; }
-.success-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
-.success-icon svg { width: 32px; height: 32px; stroke: var(--green); fill: none; stroke-width: 2.5; stroke-linecap: round; }
-.success-title { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 8px; }
-.success-sub { color: var(--gray); margin-bottom: 28px; font-size: 15px; }
-.notif-note { background: var(--green-light); border: 1px solid var(--green-mid); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--green-dark); margin-bottom: 24px; text-align: left; }
+/* BOOKING FLOW */
+.booking-layout{max-width:660px;margin:0 auto;padding:40px 24px}
+.back-link{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--gray);cursor:pointer;margin-bottom:28px;width:fit-content;border:none;background:none;padding:0}
+.back-link:hover{color:var(--black)}
+.back-link svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.step-progress{display:flex;align-items:center;margin-bottom:28px}
+.step-node{display:flex;align-items:center;gap:7px}
+.step-circle{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--gray-border);background:white;color:var(--gray);transition:all .2s}
+.step-circle.done{background:var(--green);border-color:var(--green);color:white}
+.step-circle.current{border-color:var(--black);color:var(--black)}
+.step-text{font-size:12px;color:var(--gray);white-space:nowrap}
+.step-text.current{color:var(--black);font-weight:500}
+.step-connector{flex:1;height:1px;background:var(--gray-border);margin:0 6px}
+.slabel{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);margin-bottom:12px}
+.barber-opt{display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid var(--gray-border);border-radius:var(--radius);cursor:pointer;margin-bottom:10px;background:white;transition:all .15s}
+.barber-opt:hover{border-color:var(--green)}
+.barber-opt.sel{border-color:var(--green);background:var(--green-light)}
+.b-av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:18px;flex-shrink:0;background:var(--green-light);color:var(--green-dark);overflow:hidden}
+.b-av img{width:100%;height:100%;object-fit:cover}
+.b-inf{flex:1}
+.b-nm{font-size:15px;font-weight:600;margin-bottom:1px}
+.b-mt{font-size:12px;color:var(--gray)}
+.b-pr{font-size:15px;font-weight:600;color:var(--green)}
+.chevron{width:16px;height:16px;stroke:var(--gray);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.svc-opt{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border:1.5px solid var(--gray-border);border-radius:var(--radius);cursor:pointer;margin-bottom:8px;background:white;transition:all .15s}
+.svc-opt:hover{border-color:var(--green)}
+.svc-opt.sel{border-color:var(--green);background:var(--green-light)}
+.svc-nm{font-size:14px;font-weight:500}
+.svc-dr{font-size:12px;color:var(--gray);margin-top:1px}
+.svc-pr{font-size:15px;font-weight:600;color:var(--green)}
+.date-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px;scrollbar-width:none}
+.date-row::-webkit-scrollbar{display:none}
+.date-chip{min-width:56px;padding:9px 5px;text-align:center;border-radius:10px;border:1.5px solid var(--gray-border);cursor:pointer;transition:all .15s;flex-shrink:0;background:white}
+.date-chip:hover{border-color:var(--green)}
+.date-chip.sel{background:var(--black);border-color:var(--black);color:white}
+.date-chip .dd{font-size:10px;opacity:.6}
+.date-chip .dn{font-size:16px;font-weight:600}
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:18px}
+@media(min-width:480px){.time-grid{grid-template-columns:repeat(5,1fr)}}
+.time-chip{padding:9px 4px;text-align:center;border-radius:9px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:white;color:var(--black)}
+.time-chip:hover{border-color:var(--green);color:var(--green)}
+.time-chip.sel{background:var(--green);border-color:var(--green);color:white}
+.time-chip.taken{background:var(--gray-light);color:#ccc;text-decoration:line-through;cursor:not-allowed;border-color:transparent}
+.confirm-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);padding:18px;margin-bottom:18px}
+.cr{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-border);font-size:14px}
+.cr:last-child{border-bottom:none}
+.cr .lbl{color:var(--gray)}
+.cr .val{font-weight:500}
+.fg{margin-bottom:13px}
+.fl{font-size:13px;font-weight:500;color:var(--gray);margin-bottom:5px;display:block}
+.ff{width:100%;background:white;border:1.5px solid var(--gray-border);border-radius:9px;padding:10px 13px;font-size:14px;color:var(--black);outline:none;transition:border-color .15s}
+.ff:focus{border-color:var(--green)}
+select.ff{cursor:pointer}
+textarea.ff{resize:vertical;min-height:80px}
+.btn-main{width:100%;background:var(--black);color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:500;cursor:pointer;transition:background .2s}
+.btn-main:hover{background:#1a1a1a}
+.btn-main:disabled{background:var(--gray-light);color:var(--gray);cursor:not-allowed}
+.btn-main.green{background:var(--green)}
+.btn-main.green:hover{background:var(--green-dark)}
+.btn-sec{background:transparent;color:var(--black);border:1.5px solid var(--gray-border);border-radius:11px;padding:12px 18px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-sec:hover{border-color:var(--black)}
+.btn-sm{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.success-screen{text-align:center;padding:40px 0}
+.success-icon{width:68px;height:68px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.success-icon svg{width:30px;height:30px;stroke:var(--green);fill:none;stroke-width:2.5;stroke-linecap:round}
+.success-title{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:8px}
+.success-sub{color:var(--gray);margin-bottom:24px;font-size:14px}
+.notif-note{background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:22px;text-align:left}
 
-.reg-layout { max-width: 700px; margin: 0 auto; padding: 40px 24px; }
-.warning-banner { background: var(--amber-light); border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; margin-bottom: 24px; }
-.warning-banner svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 1px; }
-.warning-banner p { font-size: 13px; color: #78350f; line-height: 1.6; }
-.reg-steps { display: flex; gap: 4px; background: var(--gray-light); border-radius: 10px; padding: 4px; margin-bottom: 28px; }
-.reg-step-btn { flex: 1; padding: 8px 4px; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; text-align: center; }
-.reg-step-btn.active { background: white; color: var(--black); font-weight: 500; box-shadow: var(--shadow); }
-.card-box { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 24px; }
-.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media(max-width: 480px) { .form-2col { grid-template-columns: 1fr; } }
-.days-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
-.day-toggle { padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--gray-border); font-size: 13px; font-weight: 500; cursor: pointer; background: white; color: var(--gray); transition: all .15s; }
-.day-toggle.on { background: var(--black); border-color: var(--black); color: white; }
-.svc-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-.del-btn { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 20px; padding: 0 4px; transition: color .15s; flex-shrink: 0; }
-.del-btn:hover { color: var(--red); }
-.add-svc-btn { background: none; border: 1.5px dashed var(--gray-border); border-radius: 8px; padding: 10px; width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--gray); cursor: pointer; transition: all .15s; margin-bottom: 20px; }
-.add-svc-btn:hover { border-color: var(--green); color: var(--green); }
-.plan-card { border: 1.5px solid var(--green); border-radius: var(--radius); padding: 20px; background: var(--green-light); margin-bottom: 16px; }
-.plan-price { font-family: 'DM Serif Display', serif; font-size: 36px; margin-bottom: 4px; }
-.plan-price span { font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 400; color: var(--gray); }
-.plan-features { list-style: none; margin: 14px 0; }
-.plan-features li { font-size: 14px; color: var(--gray); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
-.plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
-.contact-box { background: var(--gray-light); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.6; }
-.contact-box strong { color: var(--black); }
+/* REGISTER */
+.reg-layout{max-width:700px;margin:0 auto;padding:40px 24px}
+.warn-banner{background:var(--amber-light);border:1px solid #fcd34d;border-radius:10px;padding:13px 15px;display:flex;gap:11px;margin-bottom:22px}
+.warn-banner svg{width:17px;height:17px;stroke:var(--amber);fill:none;stroke-width:2;flex-shrink:0;margin-top:2px}
+.warn-banner p{font-size:13px;color:#78350f;line-height:1.6}
+.reg-steps{display:flex;gap:3px;background:var(--gray-light);border-radius:10px;padding:3px;margin-bottom:26px}
+.rsb{flex:1;padding:8px 4px;border-radius:8px;border:none;font-size:13px;cursor:pointer;background:transparent;color:var(--gray);transition:all .15s;text-align:center}
+.rsb.active{background:white;color:var(--black);font-weight:500;box-shadow:var(--shadow)}
+.card-box{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);padding:22px}
+.f2col{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+@media(max-width:480px){.f2col{grid-template-columns:1fr}}
+.days-wrap{display:flex;gap:5px;flex-wrap:wrap}
+.day-tog{padding:6px 11px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:500;cursor:pointer;background:white;color:var(--gray);transition:all .15s}
+.day-tog.on{background:var(--black);border-color:var(--black);color:white}
+.svc-row{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--gray);font-size:20px;padding:0 3px;transition:color .15s;flex-shrink:0;line-height:1}
+.del-btn:hover{color:var(--red)}
+.add-svc-btn{background:none;border:1.5px dashed var(--gray-border);border-radius:8px;padding:9px;width:100%;font-size:14px;color:var(--gray);cursor:pointer;transition:all .15s;margin-bottom:18px}
+.add-svc-btn:hover{border-color:var(--green);color:var(--green)}
+.plan-card{border:1.5px solid var(--green);border-radius:var(--radius);padding:18px;background:var(--green-light);margin-bottom:14px}
+.plan-price{font-family:'DM Serif Display',serif;font-size:34px;margin-bottom:3px}
+.plan-price span{font-size:15px;font-weight:400;color:var(--gray)}
+.plan-feats{list-style:none;margin:12px 0}
+.plan-feats li{font-size:13px;color:var(--gray);padding:3px 0;display:flex;align-items:center;gap:7px}
+.plan-feats li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+.contact-box{background:var(--gray-light);border-radius:9px;padding:13px 15px;font-size:13px;color:var(--gray);margin-bottom:18px;line-height:1.6}
+.contact-box strong{color:var(--black)}
+.photo-upload{border:2px dashed var(--gray-border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:14px;position:relative}
+.photo-upload:hover{border-color:var(--green)}
+.photo-upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-upload p{font-size:14px;color:var(--gray);margin-top:8px}
+.photo-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block;border:2px solid var(--green-mid)}
 
-.dash-layout { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
-.dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
-.dash-greeting p { color: var(--gray); font-size: 14px; margin-bottom: 4px; }
-.dash-greeting h2 { font-family: 'DM Serif Display', serif; font-size: 28px; letter-spacing: -0.5px; }
-.status-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--green-light); color: var(--green-dark); }
-.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 28px; }
-.metric { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 18px; }
-.metric-label { font-size: 12px; color: var(--gray); margin-bottom: 6px; }
-.metric-val { font-family: 'DM Serif Display', serif; font-size: 28px; }
-.metric-change { font-size: 12px; color: var(--green); margin-top: 4px; }
-.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media(max-width: 640px) { .dash-grid { grid-template-columns: 1fr; } }
-.dash-card { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 20px; }
-.dash-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
-.appt-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-border); }
-.appt-row:last-child { border-bottom: none; }
-.appt-client { font-size: 14px; font-weight: 500; }
-.appt-time { font-size: 12px; color: var(--gray); margin-top: 2px; }
-.appt-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; }
-.appt-badge.confirmed { background: var(--green-light); color: var(--green-dark); }
-.appt-badge.pending { background: var(--amber-light); color: var(--amber); }
-.appt-badge.cancelled { background: var(--red-light); color: var(--red); }
+/* LOGIN */
+.login-layout{max-width:400px;margin:0 auto;padding:60px 24px}
+.login-title{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:6px;letter-spacing:-0.5px}
+.login-sub{color:var(--gray);font-size:14px;margin-bottom:28px}
+.login-tabs{display:flex;gap:3px;background:var(--gray-light);border-radius:10px;padding:3px;margin-bottom:22px}
+.ltab{flex:1;padding:8px;border-radius:8px;border:none;font-size:14px;cursor:pointer;background:transparent;color:var(--gray);transition:all .15s;text-align:center}
+.ltab.active{background:white;color:var(--black);font-weight:500;box-shadow:var(--shadow)}
 
-.admin-layout { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
-.admin-tabs { display: flex; gap: 4px; background: var(--gray-light); border-radius: 10px; padding: 4px; margin-bottom: 24px; width: fit-content; }
-.admin-tab { padding: 7px 16px; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; background: transparent; color: var(--gray); transition: all .15s; }
-.admin-tab.active { background: white; color: var(--black); font-weight: 500; box-shadow: var(--shadow); }
-.admin-search { display: flex; align-items: center; gap: 10px; background: white; border: 1px solid var(--gray-border); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; }
-.admin-search svg { width: 15px; height: 15px; stroke: var(--gray); fill: none; stroke-width: 2; flex-shrink: 0; }
-.admin-search input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--black); outline: none; flex: 1; }
-.admin-table { background: white; border: 1px solid var(--gray-border); border-radius: var(--radius); overflow: hidden; }
-.admin-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--gray-border); gap: 12px; flex-wrap: wrap; }
-.admin-row:last-child { border-bottom: none; }
-.admin-row-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
-.admin-row-info p { font-size: 12px; color: var(--gray); }
-.admin-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.btn-approve { background: var(--green); color: white; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-.btn-approve:hover { background: var(--green-dark); }
-.btn-suspend { background: transparent; color: var(--amber); border: 1px solid #fcd34d; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-.btn-suspend:hover { background: var(--amber-light); }
-.btn-delete { background: transparent; color: var(--red); border: 1px solid #fca5a5; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-.btn-delete:hover { background: var(--red-light); }
-.btn-restore { background: transparent; color: var(--gray); border: 1px solid var(--gray-border); border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-.status-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
-.status-pill.active { background: var(--green-light); color: var(--green-dark); }
-.status-pill.pending { background: var(--amber-light); color: var(--amber); }
-.status-pill.deleted { background: var(--gray-light); color: var(--gray); }
+/* DASHBOARD */
+.dash-layout{max-width:960px;margin:0 auto;padding:40px 24px}
+.dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;flex-wrap:wrap;gap:12px}
+.dash-greeting p{color:var(--gray);font-size:13px;margin-bottom:3px}
+.dash-greeting h2{font-family:'DM Serif Display',serif;font-size:26px;letter-spacing:-0.5px}
+.status-badge{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;background:var(--green-light);color:var(--green-dark)}
+.status-badge.inactive{background:var(--amber-light);color:var(--amber)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px}
+.metric{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);padding:16px}
+.metric-label{font-size:11px;color:var(--gray);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+.metric-val{font-family:'DM Serif Display',serif;font-size:26px}
+.metric-change{font-size:11px;color:var(--green);margin-top:3px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.dash-grid{grid-template-columns:1fr}}
+.dash-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);padding:18px}
+.dash-card h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--black)}
+.appt-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-border)}
+.appt-row:last-child{border-bottom:none}
+.appt-client{font-size:13px;font-weight:500}
+.appt-time{font-size:11px;color:var(--gray);margin-top:1px}
+.ab{font-size:11px;padding:3px 8px;border-radius:20px}
+.ab.confirmed{background:var(--green-light);color:var(--green-dark)}
+.ab.pending{background:var(--amber-light);color:var(--amber)}
+.ab.cancelled{background:var(--red-light);color:var(--red)}
+.slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:14px}
+.slot-mini{padding:7px 3px;text-align:center;border-radius:7px;font-size:11px;border:1px solid var(--gray-border)}
+.slot-mini.free{border-color:var(--green);color:var(--green);background:var(--green-light)}
+.slot-mini.taken{background:var(--gray-light);color:#bbb;text-decoration:line-through;border-color:transparent}
+.review-item{padding:11px 0;border-bottom:1px solid var(--gray-border)}
+.review-item:last-child{border-bottom:none}
+.review-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.review-author{font-size:13px;font-weight:500}
+.review-stars{color:var(--gold);font-size:12px}
+.review-text{font-size:12px;color:var(--gray);line-height:1.5}
 
-.modal-wrap { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
-.modal-wrap.show { display: flex; }
-.modal-box { background: white; border-radius: var(--radius); padding: 28px; max-width: 400px; width: 100%; text-align: center; }
-.modal-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--red-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-.modal-icon svg { width: 24px; height: 24px; stroke: var(--red); fill: none; stroke-width: 2; stroke-linecap: round; }
-.modal-box h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-.modal-box p { font-size: 14px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
-.modal-btns { display: flex; gap: 10px; justify-content: center; }
-.divider { height: 1px; background: var(--gray-border); margin: 20px 0; }
-.loading { text-align: center; padding: 40px; color: var(--gray); font-size: 15px; }
-.error-msg { background: var(--red-light); border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 16px; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--black); color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; }
-.toast.show { opacity: 1; }
+/* ADMIN */
+.admin-layout{max-width:900px;margin:0 auto;padding:40px 24px}
+.admin-tabs{display:flex;gap:3px;background:var(--gray-light);border-radius:10px;padding:3px;margin-bottom:22px;width:fit-content;flex-wrap:wrap}
+.atab{padding:7px 15px;border-radius:8px;border:none;font-size:13px;cursor:pointer;background:transparent;color:var(--gray);transition:all .15s}
+.atab.active{background:white;color:var(--black);font-weight:500;box-shadow:var(--shadow)}
+.admin-search{display:flex;align-items:center;gap:9px;background:white;border:1px solid var(--gray-border);border-radius:9px;padding:9px 13px;margin-bottom:18px}
+.admin-search svg{width:14px;height:14px;stroke:var(--gray);fill:none;stroke-width:2;flex-shrink:0}
+.admin-search input{border:none;background:transparent;font-size:13px;color:var(--black);outline:none;flex:1}
+.admin-table{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);overflow:hidden}
+.admin-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--gray-border);gap:10px;flex-wrap:wrap}
+.admin-row:last-child{border-bottom:none}
+.admin-row-info h4{font-size:13px;font-weight:600;margin-bottom:1px}
+.admin-row-info p{font-size:11px;color:var(--gray)}
+.admin-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn-approve{background:var(--green);color:white;border:none;border-radius:7px;padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer}
+.btn-approve:hover{background:var(--green-dark)}
+.btn-suspend{background:transparent;color:var(--amber);border:1px solid #fcd34d;border-radius:7px;padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer}
+.btn-suspend:hover{background:var(--amber-light)}
+.btn-delete{background:transparent;color:var(--red);border:1px solid #fca5a5;border-radius:7px;padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer}
+.btn-delete:hover{background:var(--red-light)}
+.btn-restore{background:transparent;color:var(--gray);border:1px solid var(--gray-border);border-radius:7px;padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer}
+.sp{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.sp.active{background:var(--green-light);color:var(--green-dark)}
+.sp.pending{background:var(--amber-light);color:var(--amber)}
+.sp.deleted{background:var(--gray-light);color:var(--gray)}
 
-@media(max-width: 640px) {
-  .topbar { padding: 0 16px; }
-  .topbar-nav { display: none; }
-  .mobile-menu-btn { display: flex; }
-  .page-content, .booking-layout, .reg-layout, .dash-layout, .admin-layout { padding: 24px 16px; }
-  .salons-grid { grid-template-columns: 1fr; }
-  .stats-bar { gap: 24px; }
-  .dash-grid { grid-template-columns: 1fr; }
+/* MODALS */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;align-items:center;justify-content:center;padding:20px}
+.modal-backdrop.show{display:flex}
+.modal-box{background:white;border-radius:var(--radius);padding:26px;max-width:440px;width:100%}
+.modal-box h3{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:7px}
+.modal-box p{font-size:14px;color:var(--gray);margin-bottom:18px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.modal-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:13px}
+.modal-icon.danger{background:var(--red-light)}
+.modal-icon svg{width:22px;height:22px;fill:none;stroke-width:2;stroke-linecap:round}
+.modal-icon.danger svg{stroke:var(--red)}
+.urgent-result{background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:14px;margin-top:14px}
+.urgent-result h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.urgent-result p{font-size:13px;color:var(--gray);margin-bottom:0}
+
+/* UTILS */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:white;padding:11px 22px;border-radius:10px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.loading{text-align:center;padding:36px;color:var(--gray);font-size:14px}
+.divider{height:1px;background:var(--gray-border);margin:18px 0}
+.empty-state{text-align:center;padding:32px;color:var(--gray);font-size:14px}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  .topbar{padding:0 16px}
+  .topbar-nav{display:none}
+  .mobile-menu-btn{display:flex}
+  .page-content,.booking-layout,.reg-layout,.dash-layout,.admin-layout,.login-layout,.reg-layout{padding:24px 16px}
+  .barbers-grid{grid-template-columns:1fr}
+  .stats-bar{gap:28px}
+  .dash-grid{grid-template-columns:1fr}
+  .admin-tabs{width:100%}
+  .f2col{grid-template-columns:1fr}
+  .time-grid{grid-template-columns:repeat(4,1fr)}
+  .features-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -268,15 +332,41 @@ body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- URGENT MODAL -->
+<div class="modal-backdrop" id="urgent-modal">
+  <div class="modal-box">
+    <h3>I need a cut right now</h3>
+    <p>We'll find the barber with the earliest available slot today in Baku.</p>
+    <div id="urgent-result"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="btn-sec" onclick="document.getElementById('urgent-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="findUrgent()">Find me a barber</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-backdrop" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-icon danger"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
+    <h3 id="del-title">Delete barber?</h3>
+    <p id="del-msg">Their profile will be hidden immediately. You can restore them later.</p>
+    <div class="modal-btns">
+      <button class="btn-sec" onclick="document.getElementById('delete-modal').classList.remove('show')">Cancel</button>
+      <button class="btn-delete" style="border-radius:10px;padding:10px 18px;font-size:14px" onclick="doDelete()">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOPBAR -->
 <nav class="topbar">
   <div class="logo" onclick="nav('home')">trim<span>ly</span></div>
-  <div class="topbar-nav">
+  <div class="topbar-nav" id="desktop-nav">
     <button class="nav-btn active" id="nb-home" onclick="nav('home')">Home</button>
-    <button class="nav-btn" id="nb-salons" onclick="nav('salons')">Salons</button>
-    <button class="nav-btn" id="nb-barber" onclick="nav('barber')">For barbers</button>
-    <button class="nav-btn" id="nb-dashboard" onclick="nav('dashboard')">Dashboard</button>
-    <!-- Admin button removed from public nav -->
+    <button class="nav-btn" id="nb-barbers" onclick="nav('barbers')">Barbers</button>
+    <button class="nav-btn" id="nb-register" onclick="nav('register')">For barbers</button>
+    <button class="nav-btn" id="nb-login" onclick="nav('login')" id="login-nav-btn">Login</button>
+    <button class="nav-btn" id="nb-dashboard" style="display:none" onclick="nav('dashboard')">Dashboard</button>
   </div>
   <div class="topbar-right">
     <div class="lang-switcher">
@@ -284,158 +374,211 @@ body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(
       <button class="lang-btn" onclick="setLang('az',this)">AZ</button>
       <button class="lang-btn" onclick="setLang('ru',this)">RU</button>
     </div>
+    <button id="user-pill-btn" style="display:none" class="user-pill" onclick="nav('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span id="user-pill-name">Barber</span>
+    </button>
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
       <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </div>
 </nav>
 <div class="mobile-nav" id="mobile-nav">
-  <button class="mobile-nav-btn" onclick="nav('home');toggleMobileMenu()">Home</button>
-  <button class="mobile-nav-btn" onclick="nav('salons');toggleMobileMenu()">Salons</button>
-  <button class="mobile-nav-btn" onclick="nav('barber');toggleMobileMenu()">For barbers</button>
-  <button class="mobile-nav-btn" onclick="nav('dashboard');toggleMobileMenu()">Dashboard</button>
-  <!-- Admin removed from mobile nav -->
+  <button class="mobile-nav-btn" onclick="nav('home');closeMobileNav()">Home</button>
+  <button class="mobile-nav-btn" onclick="nav('barbers');closeMobileNav()">Barbers</button>
+  <button class="mobile-nav-btn" onclick="nav('register');closeMobileNav()">For barbers</button>
+  <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Login</button>
+  <button class="mobile-nav-btn" id="mob-dash-btn" style="display:none" onclick="nav('dashboard');closeMobileNav()">Dashboard</button>
+  <button class="mobile-nav-btn" id="mob-logout-btn" style="display:none;color:var(--red)" onclick="logout();closeMobileNav()">Logout</button>
 </div>
 
-<!-- HOME -->
+<!-- ==================== HOME ==================== -->
 <div class="page active" id="page-home">
   <div class="hero">
-    <div class="hero-tag">Now in Baku, Azerbaijan</div>
-    <h1>Book your next cut<br>in <em>seconds</em></h1>
-    <p>Find verified barbers near you, pick a time that works, and show up. No calls, no waiting.</p>
+    <div class="hero-tag" id="t-hero-tag">Now in Baku, Azerbaijan</div>
+    <h1 id="t-hero-h1">Book your next cut<br>in <em>seconds</em></h1>
+    <p id="t-hero-p">Find verified barbers near you, pick a time that works, and show up. No calls, no waiting.</p>
     <div class="hero-btns">
-      <button class="btn-hero-main" onclick="nav('salons')">Browse salons</button>
-      <button class="btn-hero-sec" onclick="nav('barber')">I'm a barber</button>
+      <button class="btn-hero-main" onclick="nav('barbers')" id="t-browse-btn">Browse barbers</button>
+      <button class="btn-hero-sec" onclick="nav('register')" id="t-barber-btn">I'm a barber</button>
+    </div>
+    <div class="urgent-wrap">
+      <button class="urgent-btn" onclick="document.getElementById('urgent-modal').classList.add('show')" id="t-urgent-btn">
+        <span class="urgent-dot"></span>
+        <span id="t-urgent-text">I need a cut right now</span>
+      </button>
     </div>
   </div>
   <div class="stats-bar">
-    <div class="stat-item"><div class="num" id="stat-salons">—</div><div class="lbl">Active salons</div></div>
-    <div class="stat-item"><div class="num" id="stat-bookings">—</div><div class="lbl">Bookings made</div></div>
-    <div class="stat-item"><div class="num">4.8★</div><div class="lbl">Average rating</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-barbers">—</div><div class="stat-lbl" id="t-stat1">Active barbers</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-bookings">—</div><div class="stat-lbl" id="t-stat2">Bookings made</div></div>
+    <div class="stat-item"><div class="stat-num">4.8★</div><div class="stat-lbl" id="t-stat3">Average rating</div></div>
   </div>
   <div class="features-section">
-    <h2>Everything you need, nothing you don't</h2>
-    <p class="sub">Built for barbers in Azerbaijan, designed for everyone.</p>
+    <h2 id="t-feat-h">Everything you need, nothing you don't</h2>
+    <p class="f-sub" id="t-feat-sub">Built for barbers in Azerbaijan, designed for everyone.</p>
     <div class="features-grid">
       <div class="feat-card">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div>
-        <h3>Find a barber</h3>
-        <p>Browse verified salons, read real reviews, see portfolios before you book.</p>
+        <h3 id="t-f1h">Find a barber</h3>
+        <p id="t-f1p">Browse verified barbers ranked by rating. Pick who you trust.</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-        <h3>Real-time slots</h3>
-        <p>See live availability. No calls needed — if it's available, it's yours.</p>
+        <h3 id="t-f2h">Real-time slots</h3>
+        <p id="t-f2p">See live availability. If the slot is green, it's yours.</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
-        <h3>No account needed</h3>
-        <p>Just your name and phone. Book in under 60 seconds.</p>
+        <h3 id="t-f3h">No account needed</h3>
+        <p id="t-f3p">Just your name and phone. Book in under 60 seconds.</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-        <h3>Instant notifications</h3>
-        <p>Barber is notified the moment you book.</p>
+        <h3 id="t-f4h">Instant notifications</h3>
+        <p id="t-f4p">Barber notified the moment you book. You get a reminder 1hr before.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <h3 id="t-f5h">Find on the map</h3>
+        <p id="t-f5p">See exactly where the barber is. Open in Google or Apple Maps.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <h3 id="t-f6h">Ranked barbers</h3>
+        <p id="t-f6p">Top rated barbers appear first. Only real clients can leave reviews.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- SALONS -->
-<div class="page" id="page-salons">
+<!-- ==================== BARBERS ==================== -->
+<div class="page" id="page-barbers">
   <div class="page-content">
     <div class="page-header">
-      <h2>Salons in Baku</h2>
-      <p>Choose a salon to book your appointment</p>
+      <h2 id="t-barbers-h">Barbers in Baku</h2>
+      <p id="t-barbers-p">Ranked by rating — highest first</p>
     </div>
     <div class="filters-row">
-      <div class="search-input-wrap">
+      <div class="search-wrap">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" placeholder="Search salons..." id="salon-search" oninput="filterSalons()">
+        <input type="text" id="barber-search" placeholder="Search barbers, salons..." oninput="filterBarbers()">
       </div>
+      <button class="filter-btn on" id="fb-all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" id="fb-top" onclick="setFilter('top',this)">Top rated</button>
+      <button class="filter-btn" id="fb-available" onclick="setFilter('available',this)">Available today</button>
     </div>
-    <div class="salons-grid" id="salons-grid"><div class="loading">Loading salons...</div></div>
+    <div class="barbers-grid" id="barbers-grid">
+      <div class="loading">Loading barbers...</div>
+    </div>
   </div>
 </div>
 
-<!-- BOOKING -->
+<!-- ==================== BOOKING ==================== -->
 <div class="page" id="page-booking">
   <div class="booking-layout">
-    <div class="back-link" onclick="nav('salons')">
+    <button class="back-link" onclick="nav('barbers')">
       <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
-      Back to salons
-    </div>
+      <span id="t-back">Back to barbers</span>
+    </button>
     <div class="step-progress" id="step-bar"></div>
     <div id="booking-content"></div>
   </div>
 </div>
 
-<!-- BARBER REGISTER -->
-<div class="page" id="page-barber">
+<!-- ==================== REGISTER ==================== -->
+<div class="page" id="page-register">
   <div class="reg-layout">
     <div class="page-header">
-      <h2>Join as a barber</h2>
-      <p>Set up your profile and start receiving bookings</p>
+      <h2 id="t-reg-h">Join as a barber</h2>
+      <p id="t-reg-p">Set up your profile and start receiving bookings</p>
     </div>
-    <div class="warning-banner">
+    <div class="warn-banner">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <p>Your profile will only go live after we confirm your first monthly payment. Clients will not see you until you are approved.</p>
+      <p id="t-reg-warn">Your profile will only go live after we confirm your first monthly payment. Clients will not see you until you are approved by our team.</p>
     </div>
     <div class="reg-steps">
-      <button class="reg-step-btn active" id="rs-profile" onclick="regTab('profile')">Profile</button>
-      <button class="reg-step-btn" id="rs-schedule" onclick="regTab('schedule')">Schedule</button>
-      <button class="reg-step-btn" id="rs-services" onclick="regTab('services')">Services</button>
-      <button class="reg-step-btn" id="rs-payment" onclick="regTab('payment')">Payment</button>
+      <button class="rsb active" id="rs-profile" onclick="regTab('profile')" id="t-tab-profile">Profile</button>
+      <button class="rsb" id="rs-schedule" onclick="regTab('schedule')" id="t-tab-schedule">Schedule</button>
+      <button class="rsb" id="rs-services" onclick="regTab('services')" id="t-tab-services">Services</button>
+      <button class="rsb" id="rs-payment" onclick="regTab('payment')" id="t-tab-payment">Payment</button>
     </div>
     <div id="reg-content"></div>
   </div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- ==================== LOGIN ==================== -->
+<div class="page" id="page-login">
+  <div class="login-layout">
+    <h2 class="login-title" id="t-login-h">Barber login</h2>
+    <p class="login-sub" id="t-login-p">Access your dashboard and manage appointments</p>
+    <div class="login-tabs">
+      <button class="ltab active" id="lt-login" onclick="showLoginTab('login')">Sign in</button>
+      <button class="ltab" id="lt-signup" onclick="showLoginTab('signup')">Create account</button>
+    </div>
+    <div id="login-content"></div>
+  </div>
+</div>
+
+<!-- ==================== DASHBOARD ==================== -->
 <div class="page" id="page-dashboard">
   <div class="dash-layout">
     <div class="dash-header">
       <div class="dash-greeting">
-        <p>Good morning</p>
+        <p id="t-dash-greet">Good morning</p>
         <h2 id="dash-barber-name">Loading...</h2>
       </div>
-      <span class="status-badge">Active</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="status-badge" id="dash-status-badge">Active</span>
+        <button class="btn-sec" style="padding:7px 14px;font-size:13px" onclick="logout()">Logout</button>
+      </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">Today's bookings</div><div class="metric-val" id="dash-today-count">—</div></div>
-      <div class="metric"><div class="metric-label">Total bookings</div><div class="metric-val" id="dash-total-count">—</div></div>
-      <div class="metric"><div class="metric-label">Revenue (AZN)</div><div class="metric-val" id="dash-revenue">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m1">Today's bookings</div><div class="metric-val" id="dash-today">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m2">Total bookings</div><div class="metric-val" id="dash-total">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m3">Revenue (AZN)</div><div class="metric-val" id="dash-revenue">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m4">Rating</div><div class="metric-val" id="dash-rating">—</div></div>
     </div>
     <div class="dash-grid">
       <div class="dash-card">
-        <h3>Today's appointments</h3>
+        <h3 id="t-dash-today">Today's appointments</h3>
         <div id="dash-appts"><div class="loading">Loading...</div></div>
       </div>
       <div class="dash-card">
-        <h3>All bookings</h3>
+        <h3 id="t-dash-slots">Available slots today</h3>
+        <div class="slot-grid" id="dash-slots"></div>
+        <div class="divider"></div>
+        <h3 id="t-dash-reviews">Recent reviews</h3>
+        <div id="dash-reviews"><div class="empty-state">No reviews yet</div></div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div class="dash-card">
+        <h3 id="t-dash-all">All bookings</h3>
         <div id="dash-all-bookings"><div class="loading">Loading...</div></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ADMIN -->
+<!-- ==================== ADMIN ==================== -->
 <div class="page" id="page-admin">
   <div class="admin-layout">
     <div class="page-header">
       <h2>Admin panel</h2>
       <p>Manage barber registrations and subscriptions</p>
     </div>
-    <div class="metrics" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+    <div class="metrics" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
       <div class="metric"><div class="metric-label">Active</div><div class="metric-val" id="adm-active">—</div></div>
       <div class="metric"><div class="metric-label">Pending</div><div class="metric-val" id="adm-pending">—</div></div>
-      <div class="metric"><div class="metric-label">Total bookings</div><div class="metric-val" id="adm-bookings">—</div></div>
+      <div class="metric"><div class="metric-label">Deleted</div><div class="metric-val" id="adm-deleted">—</div></div>
+      <div class="metric"><div class="metric-label">Bookings</div><div class="metric-val" id="adm-bookings">—</div></div>
     </div>
     <div class="admin-tabs">
-      <button class="admin-tab active" id="at-all" onclick="adminFilter('all')">All</button>
-      <button class="admin-tab" id="at-active" onclick="adminFilter('active')">Active</button>
-      <button class="admin-tab" id="at-pending" onclick="adminFilter('pending')">Pending</button>
-      <button class="admin-tab" id="at-deleted" onclick="adminFilter('deleted')">Deleted</button>
+      <button class="atab active" id="at-all" onclick="adminFilter('all')">All</button>
+      <button class="atab" id="at-active" onclick="adminFilter('active')">Active</button>
+      <button class="atab" id="at-pending" onclick="adminFilter('pending')">Pending</button>
+      <button class="atab" id="at-deleted" onclick="adminFilter('deleted')">Deleted</button>
     </div>
     <div class="admin-search">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
@@ -445,264 +588,521 @@ body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(
   </div>
 </div>
 
-<!-- DELETE MODAL -->
-<div class="modal-wrap" id="delete-modal">
-  <div class="modal-box">
-    <div class="modal-icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
-    <h3 id="modal-title">Delete barber?</h3>
-    <p id="modal-msg">Their salon will be hidden from clients immediately. You can restore them later.</p>
-    <div class="modal-btns">
-      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-delete" style="border-radius:12px;padding:10px 20px;font-size:14px" onclick="doDelete()">Yes, delete</button>
-    </div>
-  </div>
-</div>
-
+<!-- ==================== JAVASCRIPT ==================== -->
 <script>
-// ── SUPABASE INIT ──
+// ============================================================
+// TRIMLY v1.0.3 — JAVASCRIPT
+// Sections: Config → Supabase → State → Translations →
+// Nav → Auth → Home → Barbers → Booking → Register →
+// Dashboard → Admin → Utils
+// ============================================================
+
+// ── CONFIG ──────────────────────────────────────────────────
+// Your Supabase project URL and anon key
 const SUPABASE_URL = 'https://wipkveitbbnpeyqhmdnk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpcGt2ZWl0YmJucGV5cWhtZG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjM2MDUsImV4cCI6MjA5MjE5OTYwNX0.R_E-UWLdfMVw0pHTGkT97WB8AJnf1ci9tZtyt52uctM';
+
+// Secret hash to access admin — change this to something only you know
+const ADMIN_SECRET = '#admin-trimly2026';
+
+// ── SUPABASE INIT ────────────────────────────────────────────
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── STATE ──
-let allSalons = [];
+// ── STATE ────────────────────────────────────────────────────
+let currentLang = 'en';
+let currentUser = null;
+let currentBarberProfile = null;
 let allBarbers = [];
-let bState = { salon: null, barber: null, barberId: null, service: null, serviceId: null, time: null, date: 0, step: 0 };
-let regServices = [{ n: 'Haircut', p: '10' }, { n: 'Beard trim', p: '5' }];
-let activeDays = ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-let regForm = { name: '', salon: '', city: '', phone: '', specialty: '', about: '' };
-let adminCurrentFilter = 'all';
+let allAdminBarbers = [];
+let barberFilter = 'all';
+let adminFilter_current = 'all';
 let deleteTargetId = null;
-let bookedSlots = [];
 
-const regDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const dates = [
-  { d: 'Mon', n: 21 }, { d: 'Tue', n: 22 }, { d: 'Wed', n: 23 },
-  { d: 'Thu', n: 24 }, { d: 'Fri', n: 25 }, { d: 'Sat', n: 26 }, { d: 'Sun', n: 27 }
+// Booking state
+let bState = {
+  barber: null, barberId: null, salonName: null,
+  service: null, serviceId: null, servicePrice: null, serviceDur: null,
+  time: null, date: 0, step: 0
+};
+
+// Register state
+let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'' };
+let regServices = [{ n:'Haircut', p:'10' }, { n:'Beard trim', p:'5' }];
+let activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
+const regDaysAll = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// Time slots
+const ALL_TIMES = generateTimes('10:00','22:00',30);
+const DATES = [
+  {d:'Mon',n:21},{d:'Tue',n:22},{d:'Wed',n:23},
+  {d:'Thu',n:24},{d:'Fri',n:25},{d:'Sat',n:26},{d:'Sun',n:27}
 ];
 
-// ── TOAST ──
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+// ── TRANSLATIONS ─────────────────────────────────────────────
+// Every text on the site in 3 languages
+const TRANSLATIONS = {
+  en: {
+    'hero-tag':'Now in Baku, Azerbaijan',
+    'hero-h1':'Book your next cut<br>in <em>seconds</em>',
+    'hero-p':'Find verified barbers near you, pick a time, and show up.',
+    'browse-btn':'Browse barbers','barber-btn':"I'm a barber",
+    'urgent-text':'I need a cut right now',
+    'stat1':'Active barbers','stat2':'Bookings made','stat3':'Average rating',
+    'feat-h':'Everything you need, nothing you don\'t',
+    'feat-sub':'Built for barbers in Azerbaijan, designed for everyone.',
+    'f1h':'Find a barber','f1p':'Browse verified barbers ranked by rating.',
+    'f2h':'Real-time slots','f2p':'If the slot is green, it\'s yours.',
+    'f3h':'No account needed','f3p':'Just your name and phone. Book in 60 seconds.',
+    'f4h':'Instant notifications','f4p':'Barber notified the moment you book.',
+    'f5h':'Find on the map','f5p':'See exactly where the barber is.',
+    'f6h':'Ranked barbers','f6p':'Top rated appear first. Real reviews only.',
+    'barbers-h':'Barbers in Baku','barbers-p':'Ranked by rating — highest first',
+    'back':'Back to barbers',
+    'reg-h':'Join as a barber','reg-p':'Set up your profile and start receiving bookings',
+    'reg-warn':'Your profile will only go live after payment is confirmed.',
+    'login-h':'Barber login','login-p':'Access your dashboard and manage appointments',
+    'dash-greet':'Good morning',
+    'm1':'Today\'s bookings','m2':'Total bookings','m3':'Revenue (AZN)','m4':'Rating',
+    'dash-today':'Today\'s appointments','dash-slots':'Available slots',
+    'dash-reviews':'Recent reviews','dash-all':'All bookings',
+    'search-ph':'Search barbers, salons...',
+    'filter-all':'All','filter-top':'Top rated','filter-avail':'Available today',
+  },
+  az: {
+    'hero-tag':'İndi Bakıda, Azərbaycanda',
+    'hero-h1':'Növbəti saç kəsimini<br><em>saniyələrdə</em> sifariş et',
+    'hero-p':'Ən yaxın bərbərləri tap, vaxt seç və gəl.',
+    'browse-btn':'Bərbərlərə bax','barber-btn':'Mən bərbərəm',
+    'urgent-text':'İndi dərhal bərbərə getmək istəyirəm',
+    'stat1':'Aktiv bərbərlər','stat2':'Sifarişlər','stat3':'Orta reytinq',
+    'feat-h':'Lazım olan hər şey, lazımsız heç nə',
+    'feat-sub':'Azərbaycan bərbərləri üçün qurulub, hamı üçün dizayn edilib.',
+    'f1h':'Bərbər tap','f1p':'Reytinqə görə sıralanan bərbərləri gözden keçir.',
+    'f2h':'Real vaxt slotları','f2p':'Əgər slot yaşıldırsa, sizindir.',
+    'f3h':'Hesab lazım deyil','f3p':'Sadəcə ad və telefon. 60 saniyədə sifariş et.',
+    'f4h':'Ani bildirişlər','f4p':'Bərbər sifarişiniz anında xəbərdar edilir.',
+    'f5h':'Xəritədə tap','f5p':'Bərbərin dəqiq yerini gör.',
+    'f6h':'Reytinqli bərbərlər','f6p':'Ən yüksək reytinqlilər əvvəl görünür.',
+    'barbers-h':'Bakıdakı bərbərlər','barbers-p':'Reytinqə görə sıralanır',
+    'back':'Bərbərlərə qayıt',
+    'reg-h':'Bərbər kimi qoşul','reg-p':'Profilinizi yaradın və sifarişlər almağa başlayın',
+    'reg-warn':'Profiliniz ödəniş təsdiqləndikdən sonra aktiv olacaq.',
+    'login-h':'Bərbər girişi','login-p':'İdarə panelinə daxil olun',
+    'dash-greet':'Sabahınız xeyir',
+    'm1':'Bu günün sifarişləri','m2':'Cəmi sifarişlər','m3':'Gəlir (AZN)','m4':'Reytinq',
+    'dash-today':'Bu günün görüşləri','dash-slots':'Mövcud slotlar',
+    'dash-reviews':'Son rəylər','dash-all':'Bütün sifarişlər',
+    'search-ph':'Bərbər, salon axtar...',
+    'filter-all':'Hamısı','filter-top':'Ən yüksək','filter-avail':'Bu gün mövcud',
+  },
+  ru: {
+    'hero-tag':'Теперь в Баку, Азербайджан',
+    'hero-h1':'Запишитесь на стрижку<br>за <em>секунды</em>',
+    'hero-p':'Найдите проверенных барберов рядом, выберите время и приходите.',
+    'browse-btn':'Смотреть барберов','barber-btn':'Я барбер',
+    'urgent-text':'Мне нужна стрижка прямо сейчас',
+    'stat1':'Активных барберов','stat2':'Записей сделано','stat3':'Средний рейтинг',
+    'feat-h':'Всё что нужно, ничего лишнего',
+    'feat-sub':'Создан для барберов в Азербайджане, разработан для всех.',
+    'f1h':'Найти барбера','f1p':'Просматривайте барберов, отсортированных по рейтингу.',
+    'f2h':'Слоты в реальном времени','f2p':'Если слот зелёный — он ваш.',
+    'f3h':'Без аккаунта','f3p':'Только имя и телефон. Запись за 60 секунд.',
+    'f4h':'Мгновенные уведомления','f4p':'Барбер уведомлен в момент записи.',
+    'f5h':'Найти на карте','f5p':'Посмотрите точное местоположение барбера.',
+    'f6h':'Рейтинг барберов','f6p':'Лучшие барберы отображаются первыми.',
+    'barbers-h':'Барберы в Баку','barbers-p':'Отсортировано по рейтингу',
+    'back':'Назад к барберам',
+    'reg-h':'Зарегистрироваться как барбер','reg-p':'Создайте профиль и начните принимать записи',
+    'reg-warn':'Ваш профиль будет активирован после подтверждения оплаты.',
+    'login-h':'Вход для барбера','login-p':'Войдите в панель управления',
+    'dash-greet':'Доброе утро',
+    'm1':'Записи на сегодня','m2':'Всего записей','m3':'Доход (AZN)','m4':'Рейтинг',
+    'dash-today':'Записи на сегодня','dash-slots':'Доступные слоты',
+    'dash-reviews':'Последние отзывы','dash-all':'Все записи',
+    'search-ph':'Поиск барберов, салонов...',
+    'filter-all':'Все','filter-top':'Топ рейтинг','filter-avail':'Доступны сегодня',
+  }
+};
+
+// Apply translations to the page
+function setLang(lang, btn) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const T = TRANSLATIONS[lang];
+  // Map translation keys to element IDs
+  const map = {
+    'hero-tag':'t-hero-tag','hero-h1':'t-hero-h1','hero-p':'t-hero-p',
+    'browse-btn':'t-browse-btn','barber-btn':'t-barber-btn',
+    'urgent-text':'t-urgent-text',
+    'stat1':'t-stat1','stat2':'t-stat2','stat3':'t-stat3',
+    'feat-h':'t-feat-h','feat-sub':'t-feat-sub',
+    'f1h':'t-f1h','f1p':'t-f1p','f2h':'t-f2h','f2p':'t-f2p',
+    'f3h':'t-f3h','f3p':'t-f3p','f4h':'t-f4h','f4p':'t-f4p',
+    'f5h':'t-f5h','f5p':'t-f5p','f6h':'t-f6h','f6p':'t-f6p',
+    'barbers-h':'t-barbers-h','barbers-p':'t-barbers-p',
+    'back':'t-back',
+    'reg-h':'t-reg-h','reg-p':'t-reg-p','reg-warn':'t-reg-warn',
+    'login-h':'t-login-h','login-p':'t-login-p',
+    'dash-greet':'t-dash-greet',
+    'm1':'t-m1','m2':'t-m2','m3':'t-m3','m4':'t-m4',
+    'dash-today':'t-dash-today','dash-slots':'t-dash-slots',
+    'dash-reviews':'t-dash-reviews','dash-all':'t-dash-all',
+  };
+  Object.entries(map).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el && T[key]) el.innerHTML = T[key];
+  });
+  // Update search placeholder
+  const si = document.getElementById('barber-search');
+  if (si && T['search-ph']) si.placeholder = T['search-ph'];
+  // Update filter buttons
+  const fbAll = document.getElementById('fb-all');
+  const fbTop = document.getElementById('fb-top');
+  const fbAvail = document.getElementById('fb-available');
+  if (fbAll) fbAll.textContent = T['filter-all'];
+  if (fbTop) fbTop.textContent = T['filter-top'];
+  if (fbAvail) fbAvail.textContent = T['filter-avail'];
 }
 
-// ── NAV ──
+// ── NAVIGATION ───────────────────────────────────────────────
 function nav(page) {
+  // If trying to access dashboard without login, redirect to login
+  if (page === 'dashboard' && !currentUser) { nav('login'); return; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const nb = document.getElementById('nb-' + page);
   if (nb) nb.classList.add('active');
   window.scrollTo(0, 0);
-  if (page === 'salons') loadSalons();
+  // Trigger page-specific load functions
+  if (page === 'barbers') loadBarbers();
   if (page === 'admin') loadAdmin();
   if (page === 'dashboard') loadDashboard();
-  if (page === 'barber') regTab('profile');
+  if (page === 'register') regTab('profile');
+  if (page === 'login') showLoginTab('login');
 }
 
-function toggleMobileMenu() {
-  document.getElementById('mobile-nav').classList.toggle('open');
+function toggleMobileMenu() { document.getElementById('mobile-nav').classList.toggle('open'); }
+function closeMobileNav() { document.getElementById('mobile-nav').classList.remove('open'); }
+
+// ── AUTH ─────────────────────────────────────────────────────
+// Check if user is already logged in when page loads
+async function checkAuth() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadBarberProfile();
+    showLoggedInUI();
+  }
 }
 
-function setLang(l, btn) {
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+// Load barber profile from database for current logged-in user
+async function loadBarberProfile() {
+  if (!currentUser) return;
+  const { data } = await db.from('barbers')
+    .select('*, salons(name)')
+    .eq('email', currentUser.email)
+    .single();
+  currentBarberProfile = data;
 }
 
-// ── LOAD HOME STATS ──
+// Show logged in state in UI
+function showLoggedInUI() {
+  if (!currentUser) return;
+  const name = currentBarberProfile?.name || currentUser.email.split('@')[0];
+  document.getElementById('nb-login').style.display = 'none';
+  document.getElementById('nb-dashboard').style.display = 'inline-flex';
+  document.getElementById('user-pill-btn').style.display = 'flex';
+  document.getElementById('user-pill-name').textContent = name;
+  document.getElementById('mob-login-btn').style.display = 'none';
+  document.getElementById('mob-dash-btn').style.display = 'block';
+  document.getElementById('mob-logout-btn').style.display = 'block';
+}
+
+function showLoggedOutUI() {
+  document.getElementById('nb-login').style.display = 'inline-flex';
+  document.getElementById('nb-dashboard').style.display = 'none';
+  document.getElementById('user-pill-btn').style.display = 'none';
+  document.getElementById('mob-login-btn').style.display = 'block';
+  document.getElementById('mob-dash-btn').style.display = 'none';
+  document.getElementById('mob-logout-btn').style.display = 'none';
+}
+
+async function logout() {
+  await db.auth.signOut();
+  currentUser = null;
+  currentBarberProfile = null;
+  showLoggedOutUI();
+  nav('home');
+  toast('Logged out successfully');
+}
+
+// Login tab toggle (Sign in / Create account)
+function showLoginTab(tab) {
+  document.getElementById('lt-login').classList.toggle('active', tab === 'login');
+  document.getElementById('lt-signup').classList.toggle('active', tab === 'signup');
+  const c = document.getElementById('login-content');
+  if (tab === 'login') {
+    c.innerHTML = `
+      <div class="fg"><label class="fl">Email</label><input class="ff" id="login-email" type="email" placeholder="your@email.com"></div>
+      <div class="fg"><label class="fl">Password</label><input class="ff" id="login-pass" type="password" placeholder="Your password"></div>
+      <div id="login-error"></div>
+      <button class="btn-main green" style="margin-top:8px" onclick="signIn()">Sign in</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Don't have an account? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('signup')">Create one</span></p>`;
+  } else {
+    c.innerHTML = `
+      <div class="fg"><label class="fl">Email</label><input class="ff" id="signup-email" type="email" placeholder="your@email.com"></div>
+      <div class="fg"><label class="fl">Password (min 6 characters)</label><input class="ff" id="signup-pass" type="password" placeholder="Create a password"></div>
+      <div id="signup-error"></div>
+      <button class="btn-main green" style="margin-top:8px" onclick="signUp()">Create account</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Already have an account? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('login')">Sign in</span></p>`;
+  }
+}
+
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if (!email || !pass) { toast('Please fill in all fields'); return; }
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('login-error').innerHTML = `<div class="error-banner" style="background:var(--red-light);border:1px solid #fca5a5;border-radius:9px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px">${error.message}</div>`;
+    return;
+  }
+  currentUser = data.user;
+  await loadBarberProfile();
+  showLoggedInUI();
+  toast('Welcome back!');
+  nav('dashboard');
+}
+
+async function signUp() {
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-pass').value;
+  if (!email || !pass) { toast('Please fill in all fields'); return; }
+  if (pass.length < 6) { toast('Password must be at least 6 characters'); return; }
+  const { data, error } = await db.auth.signUp({ email, password: pass });
+  if (error) {
+    document.getElementById('signup-error').innerHTML = `<div style="background:var(--red-light);border:1px solid #fca5a5;border-radius:9px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px">${error.message}</div>`;
+    return;
+  }
+  toast('Account created! Check your email to verify, then sign in.');
+  showLoginTab('login');
+}
+
+// ── HOME ─────────────────────────────────────────────────────
 async function loadHomeStats() {
-  const { data: salons } = await db.from('salons').select('id').eq('status', 'active');
+  const { data: barbers } = await db.from('barbers').select('id').eq('status','active');
   const { data: bookings } = await db.from('bookings').select('id');
-  document.getElementById('stat-salons').textContent = salons?.length || 0;
+  document.getElementById('stat-barbers').textContent = barbers?.length || 0;
   document.getElementById('stat-bookings').textContent = bookings?.length || 0;
 }
 
-// ── SALONS ──
-async function loadSalons() {
-  document.getElementById('salons-grid').innerHTML = '<div class="loading">Loading salons...</div>';
-  const { data, error } = await db.from('salons').select('*, barbers(id, name, services(price))').eq('status', 'active');
-  if (error) { document.getElementById('salons-grid').innerHTML = '<div class="loading">Error loading salons.</div>'; return; }
-  allSalons = data || [];
-  renderSalons();
-}
-
-function filterSalons() { renderSalons(); }
-
-function renderSalons() {
-  const q = (document.getElementById('salon-search')?.value || '').toLowerCase();
-  const filtered = allSalons.filter(s => !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q));
-  const g = document.getElementById('salons-grid');
-  if (!g) return;
-  if (filtered.length === 0) {
-    g.innerHTML = '<p style="color:var(--gray);padding:20px 0">No salons found. Check back soon!</p>';
+// Urgent booking — find earliest available slot today
+async function findUrgent() {
+  const r = document.getElementById('urgent-result');
+  r.innerHTML = '<div class="loading" style="padding:16px">Searching...</div>';
+  const today = new Date().toISOString().split('T')[0];
+  const { data: barbers } = await db.from('barbers').select('*, salons(name)').eq('status','active').order('rating',{ascending:false});
+  if (!barbers || barbers.length === 0) {
+    r.innerHTML = '<p style="color:var(--gray);font-size:14px">No barbers available right now.</p>';
     return;
   }
-  g.innerHTML = filtered.map(s => {
-    const minPrice = s.from_price || '—';
-    const barberCount = s.barbers?.length || 0;
-    return `<div class="salon-card" onclick="startBooking('${s.id}')">
-      <div class="salon-cover" style="background:#1a2a1a">
-        <span class="salon-open-badge">Open</span>
-        <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
-      </div>
-      <div class="salon-body">
-        <div class="salon-name">${s.name}</div>
-        <div class="salon-location">
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  for (const barber of barbers) {
+    const { data: booked } = await db.from('bookings').select('time').eq('barber_id',barber.id).eq('date',today).eq('status','confirmed');
+    const bookedTimes = (booked || []).map(b => b.time);
+    const available = ALL_TIMES.filter(t => t > currentTime && !bookedTimes.includes(t));
+    if (available.length > 0) {
+      r.innerHTML = `<div class="urgent-result">
+        <h4>${barber.name}</h4>
+        <p>${barber.salons?.name || 'Independent'} · Next slot: <strong>${available[0]}</strong> today</p>
+      </div>`;
+      document.querySelector('#urgent-modal .modal-btns').innerHTML = `
+        <button class="btn-sec" onclick="document.getElementById('urgent-modal').classList.remove('show')">Cancel</button>
+        <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="document.getElementById('urgent-modal').classList.remove('show');startBookingBarber('${barber.id}','${barber.name}','${barber.salons?.name||''}')">Book ${available[0]}</button>`;
+      return;
+    }
+  }
+  r.innerHTML = '<p style="color:var(--gray);font-size:14px">No available slots today. Try booking for tomorrow.</p>';
+}
+
+// ── BARBERS ──────────────────────────────────────────────────
+async function loadBarbers() {
+  document.getElementById('barbers-grid').innerHTML = '<div class="loading">Loading barbers...</div>';
+  // Load barbers with their salon info, sorted by rating descending
+  const { data, error } = await db.from('barbers')
+    .select('*, salons(name,city), services(price)')
+    .eq('status','active')
+    .order('rating',{ascending:false});
+  if (error || !data) {
+    document.getElementById('barbers-grid').innerHTML = '<div class="empty-state">Could not load barbers.</div>';
+    return;
+  }
+  allBarbers = data;
+  renderBarbers();
+}
+
+function setFilter(f, btn) {
+  barberFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderBarbers();
+}
+
+function filterBarbers() { renderBarbers(); }
+
+function renderBarbers() {
+  const q = (document.getElementById('barber-search')?.value || '').toLowerCase();
+  let list = allBarbers.filter(b => {
+    if (barberFilter === 'top' && (b.rating || 0) < 4.5) return false;
+    if (q && !b.name.toLowerCase().includes(q) && !(b.salons?.name||'').toLowerCase().includes(q) && !(b.specialty||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const g = document.getElementById('barbers-grid');
+  if (!g) return;
+  if (list.length === 0) {
+    g.innerHTML = '<div class="empty-state">No barbers found. More joining soon!</div>';
+    return;
+  }
+  g.innerHTML = list.map((b, i) => {
+    const minPrice = b.services?.length ? Math.min(...b.services.map(s => s.price)) : null;
+    const rating = b.rating || 0;
+    const stars = rating > 0 ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5-Math.round(rating)) : '—';
+    const rankClass = i === 0 ? 'rank-1' : '';
+    const rankLabel = i < 3 ? `#${i+1}` : `#${i+1}`;
+    const photoEl = b.photo_url
+      ? `<img src="${b.photo_url}" alt="${b.name}" loading="lazy">`
+      : b.name[0];
+    const mapsUrl = b.location
+      ? `https://www.google.com/maps/search/${encodeURIComponent(b.location + ' Baku')}`
+      : null;
+    return `<div class="barber-card" onclick="startBookingBarber('${b.id}','${b.name}','${b.salons?.name||''}')">
+      <div class="bc-photo">${photoEl}<div class="rank-badge ${rankClass}">${rankLabel}</div></div>
+      <div class="bc-body">
+        <div class="bc-name">${b.name}</div>
+        <div class="bc-salon">
+          <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+          ${b.salons?.name || 'Independent'}
+        </div>
+        <div class="bc-specialty">${b.specialty || 'All styles'} · ${b.salons?.city || 'Baku'}</div>
+        <div class="bc-footer">
+          <div class="bc-rating"><span class="star">★</span>${rating > 0 ? rating.toFixed(1) : 'New'} (${b.review_count || 0})</div>
+          <div class="bc-price">${minPrice !== null ? 'from ' + minPrice + ' AZN' : '—'}</div>
+        </div>
+        ${mapsUrl ? `<div style="margin-top:10px"><a class="map-btn" href="${mapsUrl}" target="_blank" onclick="event.stopPropagation()">
           <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          ${s.city}
-        </div>
-        <div class="salon-footer">
-          <div class="from-price">From <strong>${minPrice} AZN</strong> · ${barberCount} barber${barberCount !== 1 ? 's' : ''}</div>
-          <div style="font-size:13px;color:var(--gray)">★ ${s.rating || 'New'}</div>
-        </div>
+          View on map</a></div>` : ''}
       </div>
     </div>`;
   }).join('');
 }
 
-// ── BOOKING ──
-async function startBooking(salonId) {
-  const salon = allSalons.find(s => s.id === salonId);
-  bState = { salon, barber: null, barberId: null, service: null, serviceId: null, time: null, date: 0, step: 0 };
+// ── BOOKING ──────────────────────────────────────────────────
+async function startBookingBarber(barberId, barberName, salonName) {
+  bState = { barberId, barber:barberName, salonName, service:null, serviceId:null, servicePrice:null, serviceDur:null, time:null, date:0, step:0 };
   nav('booking');
   await renderBooking();
 }
 
-const stepLabels = ['Barber', 'Service', 'Time', 'Confirm'];
+const STEP_LABELS = ['Service','Time','Confirm'];
+
 function renderStepBar() {
-  document.getElementById('step-bar').innerHTML = stepLabels.map((l, i) => {
+  document.getElementById('step-bar').innerHTML = STEP_LABELS.map((l,i) => {
     const done = i < bState.step, cur = i === bState.step;
     return `<div class="step-node">
-      <div class="step-circle ${done ? 'done' : cur ? 'current' : ''}">${done ? '✓' : i + 1}</div>
-      <span class="step-text ${cur ? 'current' : ''}">${l}</span>
-    </div>${i < stepLabels.length - 1 ? '<div class="step-connector"></div>' : ''}`;
+      <div class="step-circle ${done?'done':cur?'current':''}">${done?'✓':i+1}</div>
+      <span class="step-text ${cur?'current':''}">${l}</span>
+    </div>${i<STEP_LABELS.length-1?'<div class="step-connector"></div>':''}`;
   }).join('');
 }
 
 async function renderBooking() {
   renderStepBar();
   const c = document.getElementById('booking-content');
-  const s = bState.salon;
 
   if (bState.step === 0) {
-    c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div><div class="loading">Loading barbers...</div>`;
-    const { data: barbers } = await db.from('barbers').select('*, services(*)').eq('salon_id', s.id).eq('status', 'active');
-    if (!barbers || barbers.length === 0) {
-      c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div><p style="color:var(--gray)">No barbers available right now.</p>`;
+    // Step 0 — Choose service
+    c.innerHTML = `<div class="slabel">${bState.barber} at ${bState.salonName || 'Independent'} — Choose a service</div><div class="loading">Loading services...</div>`;
+    const { data: services } = await db.from('services').select('*').eq('barber_id', bState.barberId).order('price');
+    if (!services || services.length === 0) {
+      c.innerHTML += '<div class="empty-state">No services listed yet.</div>';
       return;
     }
-    c.innerHTML = `<div class="section-label">${s.name} — Choose your barber</div>` +
-      barbers.map(b => {
-        const minPrice = b.services?.length ? Math.min(...b.services.map(sv => sv.price)) : '—';
-        return `<div class="barber-option" onclick="pickBarber('${b.id}', '${b.name}', ${JSON.stringify(b.services).replace(/'/g, "&#39;")})">
-          <div class="barber-avatar">${b.name[0]}</div>
-          <div class="barber-info">
-            <div class="barber-name-text">${b.name}</div>
-            <div class="barber-meta">${b.specialty || 'All styles'} · ${(b.work_days || []).join(', ')}</div>
-          </div>
-          <div class="barber-price">from ${minPrice} AZN</div>
-          <svg class="chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
-        </div>`;
-      }).join('');
+    c.innerHTML = `<div class="slabel">${bState.barber} — Choose a service</div>` +
+      services.map(sv => `<div class="svc-opt ${bState.serviceId===sv.id?'sel':''}" onclick="pickService('${sv.id}','${sv.name}',${sv.price},${sv.duration_minutes||30})">
+        <div><div class="svc-nm">${sv.name}</div><div class="svc-dr">${sv.duration_minutes||30} min</div></div>
+        <div class="svc-pr">${sv.price} AZN</div>
+      </div>`).join('');
 
   } else if (bState.step === 1) {
-    const { data: services } = await db.from('services').select('*').eq('barber_id', bState.barberId);
-    c.innerHTML = `<div class="section-label">${bState.barber} — Choose a service</div>` +
-      (services || []).map((sv, i) => `<div class="service-option ${bState.serviceId === sv.id ? 'selected' : ''}" onclick="pickService('${sv.id}', '${sv.name}', ${sv.price}, ${sv.duration_minutes})">
-        <div><div class="svc-name">${sv.name}</div><div class="svc-dur">${sv.duration_minutes} min</div></div>
-        <div class="svc-price">${sv.price} AZN</div>
-      </div>`).join('') +
-      `<button class="btn-secondary" style="margin-top:8px" onclick="bState.step=0;renderBooking()">← Back</button>`;
+    // Step 1 — Choose date and time
+    const dateStr = `2026-04-${20 + bState.date + 1}`;
+    const { data: booked } = await db.from('bookings').select('time').eq('barber_id',bState.barberId).eq('date',dateStr).eq('status','confirmed');
+    const bookedSlots = (booked || []).map(b => b.time);
+    const dateRow = `<div class="date-row">${DATES.map((d,i) => `<div class="date-chip ${bState.date===i?'sel':''}" onclick="bState.date=${i};renderBooking()"><div class="dd">${d.d}</div><div class="dn">${d.n}</div></div>`).join('')}</div>`;
+    const timeGrid = `<div class="time-grid">${ALL_TIMES.map(t => `<div class="time-chip ${bookedSlots.includes(t)?'taken':bState.time===t?'sel':''}" onclick="${bookedSlots.includes(t)?'':`pickTime('${t}')`}">${t}</div>`).join('')}</div>`;
+    c.innerHTML = `<div class="slabel">Pick a date & time</div>${dateRow}${timeGrid}
+      <button class="btn-sec" onclick="bState.step=0;renderBooking()">← Back</button>`;
 
   } else if (bState.step === 2) {
-    const today = new Date();
-    const dateStr = `2026-04-${21 + bState.date}`;
-    const { data: existing } = await db.from('bookings').select('time').eq('barber_id', bState.barberId).eq('date', dateStr).eq('status', 'confirmed');
-    bookedSlots = (existing || []).map(b => b.time);
-    const allTimes = generateTimes('10:00', '22:00', 30);
-    const dateRow = `<div class="date-row">${dates.map((d, i) => `<div class="date-chip ${bState.date === i ? 'sel' : ''}" onclick="bState.date=${i};renderBooking()"><div class="dd">${d.d}</div><div class="dn">${d.n}</div></div>`).join('')}</div>`;
-    const timeGrid = `<div class="time-grid">${allTimes.map(t => `<div class="time-chip ${bookedSlots.includes(t) ? 'taken' : bState.time === t ? 'sel' : ''}" onclick="${bookedSlots.includes(t) ? '' : `pickTime('${t}')`}">${t}</div>`).join('')}</div>`;
-    c.innerHTML = `<div class="section-label">Pick a date & time</div>${dateRow}${timeGrid}<button class="btn-secondary" onclick="bState.step=1;renderBooking()">← Back</button>`;
-
-  } else if (bState.step === 3) {
+    // Step 2 — Confirm and enter details
     c.innerHTML = `
       <div class="confirm-card">
-        <div class="confirm-row"><span class="label">Salon</span><span class="value">${s.name}</span></div>
-        <div class="confirm-row"><span class="label">Barber</span><span class="value">${bState.barber}</span></div>
-        <div class="confirm-row"><span class="label">Service</span><span class="value">${bState.service}</span></div>
-        <div class="confirm-row"><span class="label">Time</span><span class="value">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n} Apr</span></div>
-        <div class="confirm-row"><span class="label">Price</span><span class="value" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
-        <div class="confirm-row"><span class="label">Payment</span><span class="value">Cash or card at salon</span></div>
+        <div class="cr"><span class="lbl">Barber</span><span class="val">${bState.barber}</span></div>
+        <div class="cr"><span class="lbl">Salon</span><span class="val">${bState.salonName||'Independent'}</span></div>
+        <div class="cr"><span class="lbl">Service</span><span class="val">${bState.service}</span></div>
+        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${DATES[bState.date].d} ${DATES[bState.date].n} Apr</span></div>
+        <div class="cr"><span class="lbl">Price</span><span class="val" style="color:var(--green);font-weight:600">${bState.servicePrice} AZN</span></div>
+        <div class="cr"><span class="lbl">Payment</span><span class="val">Cash or card at salon</span></div>
       </div>
-      <div class="form-group"><label class="form-label">Full name</label><input class="form-field" id="cn" placeholder="e.g. Ali Mammadov"></div>
-      <div class="form-group"><label class="form-label">Phone number</label><input class="form-field" id="cp" placeholder="+994 50 000 00 00" type="tel"></div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn-secondary" onclick="bState.step=2;renderBooking()">← Back</button>
+      <div class="fg"><label class="fl">Full name</label><input class="ff" id="cn" placeholder="e.g. Ali Mammadov"></div>
+      <div class="fg"><label class="fl">Phone number</label><input class="ff" id="cp" placeholder="+994 50 000 00 00" type="tel"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" onclick="bState.step=1;renderBooking()">← Back</button>
         <button class="btn-main green" style="flex:1" onclick="confirmBooking()">Confirm booking</button>
       </div>`;
 
-  } else if (bState.step === 4) {
+  } else if (bState.step === 3) {
+    // Success screen
     c.innerHTML = `<div class="success-screen">
       <div class="success-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
       <div class="success-title">You're booked!</div>
       <p class="success-sub">${bState.barber} has been notified. See you soon.</p>
-      <div class="confirm-card" style="text-align:left;margin-bottom:16px">
-        <div class="confirm-row"><span class="label">Salon</span><span class="value">${s.name}</span></div>
-        <div class="confirm-row"><span class="label">Barber</span><span class="value">${bState.barber}</span></div>
-        <div class="confirm-row"><span class="label">Time</span><span class="value">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n} Apr</span></div>
-        <div class="confirm-row" style="border-bottom:none"><span class="label">Price</span><span class="value" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
+      <div class="confirm-card" style="text-align:left;margin-bottom:18px">
+        <div class="cr"><span class="lbl">Barber</span><span class="val">${bState.barber}</span></div>
+        <div class="cr"><span class="lbl">Service</span><span class="val">${bState.service}</span></div>
+        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${DATES[bState.date].d} ${DATES[bState.date].n} Apr</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">Price</span><span class="val" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
       </div>
-      <div class="notif-note">Booking saved. Barber has been notified.</div>
-      <button class="btn-main" onclick="nav('salons')">Back to salons</button>
+      <div class="notif-note">Booking saved to database. Barber notified.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn-sec" onclick="nav('barbers')">Browse more barbers</button>
+        <button class="btn-main" style="width:auto;padding:12px 22px" onclick="nav('home')">Back to home</button>
+      </div>
     </div>`;
   }
 }
 
-function generateTimes(start, end, intervalMins) {
-  const times = [];
-  let [h, m] = start.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  while (h < eh || (h === eh && m < em)) {
-    times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-    m += intervalMins;
-    if (m >= 60) { h++; m -= 60; }
-  }
-  return times;
-}
-
-function pickBarber(id, name, services) {
-  bState.barberId = id;
-  bState.barber = name;
-  bState.step = 1;
-  renderBooking();
-}
-
 function pickService(id, name, price, dur) {
-  bState.serviceId = id;
-  bState.service = name;
-  bState.servicePrice = price;
-  bState.serviceDur = dur;
-  bState.step = 2;
-  renderBooking();
+  bState.serviceId = id; bState.service = name;
+  bState.servicePrice = price; bState.serviceDur = dur;
+  bState.step = 1; renderBooking();
 }
 
 function pickTime(t) {
-  bState.time = t;
-  bState.step = 3;
-  renderBooking();
+  bState.time = t; bState.step = 2; renderBooking();
 }
 
 async function confirmBooking() {
   const name = document.getElementById('cn')?.value.trim();
   const phone = document.getElementById('cp')?.value.trim();
-  if (!name || !phone) { toast('Please fill in your name and phone number.'); return; }
-  const dateStr = `2026-04-${21 + bState.date}`;
-  const btn = document.querySelector('.btn-main.green');
+  if (!name || !phone) { toast('Please enter your name and phone number'); return; }
+  const btn = document.querySelector('#booking-content .btn-main.green');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  const dateStr = `2026-04-${20 + bState.date + 1}`;
   const { error } = await db.from('bookings').insert({
     barber_id: bState.barberId,
     service_id: bState.serviceId,
@@ -713,60 +1113,76 @@ async function confirmBooking() {
     status: 'confirmed',
     payment_method: 'cash'
   });
-  if (error) { toast('Error saving booking. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Confirm booking'; } return; }
-  bState.step = 4;
+  if (error) {
+    toast('Error saving booking. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm booking'; }
+    return;
+  }
+  bState.step = 3;
   renderBooking();
 }
 
-// ── REGISTER ──
+// ── REGISTER ─────────────────────────────────────────────────
 function regTab(tab) {
-  ['profile', 'schedule', 'services', 'payment'].forEach(t => {
-    document.getElementById('rs-' + t).classList.toggle('active', t === tab);
+  ['profile','schedule','services','payment'].forEach(t => {
+    document.getElementById('rs-'+t).classList.toggle('active', t===tab);
   });
   const c = document.getElementById('reg-content');
+
   if (tab === 'profile') {
     c.innerHTML = `<div class="card-box">
-      <div class="form-2col">
-        <div class="form-group"><label class="form-label">Your full name</label><input class="form-field" id="rf-name" placeholder="e.g. Anar Huseynov" value="${regForm.name}"></div>
-        <div class="form-group"><label class="form-label">Salon name</label><input class="form-field" id="rf-salon" placeholder="e.g. Alpha Barbershop" value="${regForm.salon}"></div>
+      <div class="fg"><label class="fl">Photo (optional)</label>
+        <div class="photo-upload" id="photo-drop">
+          <input type="file" accept="image/*" onchange="previewPhoto(this)">
+          <svg width="32" height="32" fill="none" stroke="var(--gray)" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p>Upload a photo of yourself or your salon</p>
+        </div>
+        <img id="photo-preview-img" class="photo-preview" style="display:none">
       </div>
-      <div class="form-group"><label class="form-label">City / district</label><input class="form-field" id="rf-city" placeholder="e.g. Baku, Narimanov district" value="${regForm.city}"></div>
-      <div class="form-group"><label class="form-label">Phone number</label><input class="form-field" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${regForm.phone}"></div>
-      <div class="form-group"><label class="form-label">Your specialty</label><input class="form-field" id="rf-specialty" placeholder="e.g. Fades, classic cuts, beard design" value="${regForm.specialty}"></div>
-      <div class="form-group"><label class="form-label">About you (optional)</label><textarea class="form-field" id="rf-about" rows="3" placeholder="Tell clients about your experience...">${regForm.about}</textarea></div>
-      <button class="btn-main" onclick="saveProfileAndContinue()">Save & continue →</button>
+      <div class="f2col">
+        <div class="fg"><label class="fl">Your full name *</label><input class="ff" id="rf-name" placeholder="e.g. Anar Huseynov" value="${regForm.name}"></div>
+        <div class="fg"><label class="fl">Salon name *</label><input class="ff" id="rf-salon" placeholder="e.g. Alpha Barbershop" value="${regForm.salon}"></div>
+      </div>
+      <div class="fg"><label class="fl">City / District *</label><input class="ff" id="rf-city" placeholder="e.g. Baku, Narimanov district" value="${regForm.city}"></div>
+      <div class="fg"><label class="fl">Phone number *</label><input class="ff" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${regForm.phone}"></div>
+      <div class="fg"><label class="fl">Location / Address (for map)</label><input class="ff" id="rf-location" placeholder="e.g. Nizami Street 45, Baku" value="${regForm.location}"></div>
+      <div class="fg"><label class="fl">Your specialty</label><input class="ff" id="rf-specialty" placeholder="e.g. Fades, classic cuts, beard design" value="${regForm.specialty}"></div>
+      <div class="fg"><label class="fl">About you (optional)</label><textarea class="ff" id="rf-about" rows="3" placeholder="Tell clients about your experience...">${regForm.about}</textarea></div>
+      <button class="btn-main" onclick="saveProfileTab()">Save & continue →</button>
     </div>`;
   } else if (tab === 'schedule') {
     c.innerHTML = `<div class="card-box">
-      <div class="form-group">
-        <label class="form-label">Working days</label>
-        <div class="days-wrap">${regDays.map(d => `<button class="day-toggle ${activeDays.includes(d) ? 'on' : ''}" onclick="toggleDay('${d}',this)">${d}</button>`).join('')}</div>
+      <div class="fg"><label class="fl">Working days</label>
+        <div class="days-wrap">${regDaysAll.map(d => `<button class="day-tog ${activeDays.includes(d)?'on':''}" onclick="toggleDay('${d}',this)">${d}</button>`).join('')}</div>
       </div>
-      <div class="form-2col" style="margin-top:16px">
-        <div class="form-group"><label class="form-label">Opening time</label>
-          <select class="form-field" id="rf-start">${['08:00','09:00','10:00','11:00'].map(t => `<option>${t}</option>`).join('')}</select>
+      <div class="f2col" style="margin-top:14px">
+        <div class="fg"><label class="fl">Opening time</label>
+          <select class="ff" id="rf-start">${['08:00','09:00','10:00','11:00'].map(t=>`<option ${t==='10:00'?'selected':''}>${t}</option>`).join('')}</select>
         </div>
-        <div class="form-group"><label class="form-label">Closing time</label>
-          <select class="form-field" id="rf-end">${['18:00','19:00','20:00','21:00','22:00'].map(t => `<option ${t==='22:00'?'selected':''}>${t}</option>`).join('')}</select>
+        <div class="fg"><label class="fl">Closing time</label>
+          <select class="ff" id="rf-end">${['18:00','19:00','20:00','21:00','22:00'].map(t=>`<option ${t==='22:00'?'selected':''}>${t}</option>`).join('')}</select>
         </div>
       </div>
-      <p style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6">System auto-generates 30-minute slots. You can block dates later.</p>
+      <div class="fg"><label class="fl">Buffer between appointments</label>
+        <select class="ff"><option>0 min</option><option>5 min</option><option selected>10 min</option><option>15 min</option></select>
+      </div>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:18px;line-height:1.6">The system auto-generates 30-minute slots within these hours. You can block specific dates from your dashboard later.</p>
       <div style="display:flex;gap:10px">
-        <button class="btn-secondary" onclick="regTab('profile')">← Back</button>
+        <button class="btn-sec" onclick="regTab('profile')">← Back</button>
         <button class="btn-main" style="flex:1" onclick="regTab('services')">Save & continue →</button>
       </div>
     </div>`;
   } else if (tab === 'services') {
     c.innerHTML = `<div class="card-box">
-      <p style="font-size:14px;color:var(--gray);margin-bottom:16px">Add your services and prices. Clients will see these when booking you.</p>
-      <div id="svc-list">${regServices.map((s, i) => `<div class="svc-row">
-        <input class="form-field" value="${s.n}" placeholder="Service name" onchange="regServices[${i}].n=this.value" style="flex:2">
-        <input class="form-field" value="${s.p}" placeholder="AZN" type="number" min="1" onchange="regServices[${i}].p=this.value" style="flex:1">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:15px;line-height:1.6">Add every service you offer. Clients will see this list when booking you.</p>
+      <div id="svc-list">${regServices.map((s,i) => `<div class="svc-row">
+        <input class="ff" value="${s.n}" placeholder="Service name" onchange="regServices[${i}].n=this.value" style="flex:2">
+        <input class="ff" value="${s.p}" placeholder="AZN" type="number" min="1" onchange="regServices[${i}].p=this.value" style="flex:1">
         <button class="del-btn" onclick="regServices.splice(${i},1);regTab('services')">×</button>
       </div>`).join('')}</div>
       <button class="add-svc-btn" onclick="regServices.push({n:'',p:''});regTab('services')">+ Add service</button>
       <div style="display:flex;gap:10px">
-        <button class="btn-secondary" onclick="regTab('schedule')">← Back</button>
+        <button class="btn-sec" onclick="regTab('schedule')">← Back</button>
         <button class="btn-main" style="flex:1" onclick="regTab('payment')">Save & continue →</button>
       </div>
     </div>`;
@@ -774,216 +1190,254 @@ function regTab(tab) {
     c.innerHTML = `<div class="card-box">
       <div class="plan-card">
         <div class="plan-price">__ AZN <span>/ month</span></div>
-        <p style="font-size:14px;color:var(--gray)">Monthly subscription · cancel anytime</p>
-        <ul class="plan-features">
+        <p style="font-size:13px;color:var(--green-dark)">Monthly subscription · cancel anytime</p>
+        <ul class="plan-feats">
           <li>Unlimited bookings</li>
-          <li>Real-time notifications</li>
-          <li>Client management dashboard</li>
-          <li>Analytics & revenue tracking</li>
+          <li>Real-time client notifications</li>
+          <li>Your own dashboard with analytics</li>
+          <li>Top ranking in search results</li>
+          <li>Photo portfolio on your profile</li>
         </ul>
       </div>
       <div class="contact-box">
         After submitting, contact us to activate your account:<br><br>
         <strong>WhatsApp / Call: +994 XX XXX XX XX</strong><br>
-        Profile goes live within 24 hours of payment confirmation.
+        Your profile goes live within 24 hours of payment confirmation.
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn-secondary" onclick="regTab('services')">← Back</button>
+        <button class="btn-sec" onclick="regTab('services')">← Back</button>
         <button class="btn-main green" style="flex:1" onclick="submitRegistration()">Submit registration</button>
       </div>
     </div>`;
   }
 }
 
-function saveProfileAndContinue() {
-  regForm.name = document.getElementById('rf-name')?.value || '';
-  regForm.salon = document.getElementById('rf-salon')?.value || '';
-  regForm.city = document.getElementById('rf-city')?.value || '';
-  regForm.phone = document.getElementById('rf-phone')?.value || '';
-  regForm.specialty = document.getElementById('rf-specialty')?.value || '';
-  regForm.about = document.getElementById('rf-about')?.value || '';
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('photo-preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    regForm.photoUrl = e.target.result; // In production, upload to Supabase Storage
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveProfileTab() {
+  regForm.name = document.getElementById('rf-name')?.value.trim() || '';
+  regForm.salon = document.getElementById('rf-salon')?.value.trim() || '';
+  regForm.city = document.getElementById('rf-city')?.value.trim() || '';
+  regForm.phone = document.getElementById('rf-phone')?.value.trim() || '';
+  regForm.location = document.getElementById('rf-location')?.value.trim() || '';
+  regForm.specialty = document.getElementById('rf-specialty')?.value.trim() || '';
+  regForm.about = document.getElementById('rf-about')?.value.trim() || '';
   if (!regForm.name || !regForm.salon || !regForm.city || !regForm.phone) {
-    toast('Please fill in all required fields.');
+    toast('Please fill in all required fields (*)');
     return;
   }
   regTab('schedule');
 }
 
+function toggleDay(d, btn) {
+  const i = activeDays.indexOf(d);
+  if (i > -1) { activeDays.splice(i,1); btn.classList.remove('on'); }
+  else { activeDays.push(d); btn.classList.add('on'); }
+}
+
 async function submitRegistration() {
-  if (!regForm.name || !regForm.salon) { toast('Please complete your profile first.'); regTab('profile'); return; }
-  const btn = document.querySelector('#page-barber .btn-main.green');
+  if (!regForm.name || !regForm.salon) { toast('Please complete your profile first'); regTab('profile'); return; }
+  const btn = document.querySelector('#page-register .btn-main.green');
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-  const { data: salonData, error: salonError } = await db.from('salons').insert({
+  // Create salon first
+  const { data: salonData, error: salonErr } = await db.from('salons').insert({
     name: regForm.salon, city: regForm.city, phone: regForm.phone,
-    about: regForm.about, status: 'pending', from_price: Math.min(...regServices.map(s => parseFloat(s.p) || 0))
+    about: regForm.about, status: 'pending',
+    from_price: regServices.length ? Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)) : 0
   }).select().single();
-  if (salonError) { toast('Error submitting. Please try again.'); if (btn) { btn.disabled = false; btn.textContent = 'Submit registration'; } return; }
-  const { data: barberData, error: barberError } = await db.from('barbers').insert({
+  if (salonErr) { toast('Error submitting. Please try again.'); if(btn){btn.disabled=false;btn.textContent='Submit registration';} return; }
+  // Create barber
+  const { data: barberData, error: barberErr } = await db.from('barbers').insert({
     salon_id: salonData.id, name: regForm.name, specialty: regForm.specialty,
     work_days: activeDays, start_time: '10:00', end_time: '22:00',
-    buffer_minutes: 10, status: 'pending'
+    buffer_minutes: 10, status: 'pending', location: regForm.location,
+    rating: 0, review_count: 0
   }).select().single();
-  if (barberError) { toast('Error saving barber. Please try again.'); return; }
-  if (regServices.length > 0) {
-    await db.from('services').insert(regServices.filter(s => s.n && s.p).map(s => ({
+  if (barberErr) { toast('Error saving barber. Please try again.'); return; }
+  // Create services
+  const validServices = regServices.filter(s => s.n && s.p);
+  if (validServices.length > 0) {
+    await db.from('services').insert(validServices.map(s => ({
       barber_id: barberData.id, name: s.n,
       price: parseFloat(s.p), duration_minutes: 30
     })));
   }
   toast('Registration submitted! We will contact you within 24 hours.');
-  regForm = { name: '', salon: '', city: '', phone: '', specialty: '', about: '' };
-  regServices = [{ n: 'Haircut', p: '10' }];
+  // Reset form
+  regForm = { name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'' };
+  regServices = [{ n:'Haircut', p:'10' }];
+  activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
   regTab('profile');
+  if(btn){btn.disabled=false;btn.textContent='Submit registration';}
 }
 
-function toggleDay(d, btn) {
-  const i = activeDays.indexOf(d);
-  if (i > -1) { activeDays.splice(i, 1); btn.classList.remove('on'); }
-  else { activeDays.push(d); btn.classList.add('on'); }
-}
-
-// ── DASHBOARD ──
+// ── DASHBOARD ────────────────────────────────────────────────
 async function loadDashboard() {
-  const { data: barbers } = await db.from('barbers').select('*').eq('status', 'active').limit(1);
-  if (!barbers || barbers.length === 0) {
-    document.getElementById('dash-barber-name').textContent = 'No active barbers';
+  if (!currentUser) { nav('login'); return; }
+  // Load barber profile for this user
+  const { data: barber } = await db.from('barbers')
+    .select('*, salons(name)')
+    .eq('email', currentUser.email)
+    .maybeSingle();
+  // If no barber profile linked, show first active barber (demo fallback)
+  const targetBarber = barber || (await db.from('barbers').select('*').eq('status','active').limit(1)).data?.[0];
+  if (!targetBarber) {
+    document.getElementById('dash-barber-name').textContent = 'No profile found';
     return;
   }
-  const barber = barbers[0];
-  document.getElementById('dash-barber-name').textContent = barber.name;
+  document.getElementById('dash-barber-name').textContent = targetBarber.name;
+  document.getElementById('dash-status-badge').textContent = targetBarber.status === 'active' ? 'Active' : 'Pending';
+  document.getElementById('dash-status-badge').className = 'status-badge' + (targetBarber.status !== 'active' ? ' inactive' : '');
+  document.getElementById('dash-rating').textContent = targetBarber.rating ? targetBarber.rating.toFixed(1) : '—';
   const today = new Date().toISOString().split('T')[0];
-  const { data: todayBookings } = await db.from('bookings').select('*, services(name, price)').eq('barber_id', barber.id).eq('date', today);
-  const { data: allBookings } = await db.from('bookings').select('*, services(name, price)').eq('barber_id', barber.id).order('date', { ascending: false }).limit(20);
-  const revenue = (allBookings || []).reduce((sum, b) => sum + (b.services?.price || 0), 0);
-  document.getElementById('dash-today-count').textContent = todayBookings?.length || 0;
-  document.getElementById('dash-total-count').textContent = allBookings?.length || 0;
+  const { data: todayB } = await db.from('bookings').select('*, services(name,price)').eq('barber_id',targetBarber.id).eq('date',today).order('time');
+  const { data: allB } = await db.from('bookings').select('*, services(name,price)').eq('barber_id',targetBarber.id).order('date',{ascending:false}).limit(30);
+  const revenue = (allB||[]).reduce((s,b) => s+(b.services?.price||0), 0);
+  document.getElementById('dash-today').textContent = todayB?.length || 0;
+  document.getElementById('dash-total').textContent = allB?.length || 0;
   document.getElementById('dash-revenue').textContent = revenue;
+  // Today appointments
   const apptEl = document.getElementById('dash-appts');
-  if (!todayBookings || todayBookings.length === 0) {
-    apptEl.innerHTML = '<p style="color:var(--gray);font-size:14px">No appointments today.</p>';
-  } else {
-    apptEl.innerHTML = todayBookings.map(b => `<div class="appt-row">
-      <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.time} · ${b.services?.name || '—'}</div></div>
-      <span class="appt-badge confirmed">Confirmed</span>
-    </div>`).join('');
-  }
+  apptEl.innerHTML = todayB?.length ? todayB.map(b => `<div class="appt-row">
+    <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.time} · ${b.services?.name||'—'} · ${b.client_phone}</div></div>
+    <span class="ab confirmed">${b.services?.price||0} AZN</span>
+  </div>`).join('') : '<div class="empty-state">No appointments today</div>';
+  // Available slots
+  const bookedToday = (todayB||[]).map(b=>b.time);
+  const slots = ALL_TIMES.slice(0,10);
+  document.getElementById('dash-slots').innerHTML = slots.map(t => `<div class="slot-mini ${bookedToday.includes(t)?'taken':'free'}">${t}</div>`).join('');
+  // All bookings
   const allEl = document.getElementById('dash-all-bookings');
-  if (!allBookings || allBookings.length === 0) {
-    allEl.innerHTML = '<p style="color:var(--gray);font-size:14px">No bookings yet.</p>';
-  } else {
-    allEl.innerHTML = allBookings.map(b => `<div class="appt-row">
-      <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.date} · ${b.time}</div></div>
-      <span class="appt-badge confirmed">${b.services?.price || 0} AZN</span>
-    </div>`).join('');
-  }
+  allEl.innerHTML = allB?.length ? allB.map(b => `<div class="appt-row">
+    <div><div class="appt-client">${b.client_name}</div><div class="appt-time">${b.date} · ${b.time} · ${b.client_phone}</div></div>
+    <span class="ab confirmed">${b.services?.price||0} AZN</span>
+  </div>`).join('') : '<div class="empty-state">No bookings yet</div>';
+  // Reviews placeholder
+  document.getElementById('dash-reviews').innerHTML = '<div class="empty-state">No reviews yet — they appear here once clients rate you</div>';
 }
 
-// ── ADMIN ──
+// ── ADMIN ────────────────────────────────────────────────────
 async function loadAdmin() {
-  const { data: barbers } = await db.from('barbers').select('*, salons(name, city)');
+  const { data: barbers } = await db.from('barbers').select('*, salons(name,city)').order('created_at',{ascending:false});
   const { data: bookings } = await db.from('bookings').select('id');
-  allBarbers = barbers || [];
-  document.getElementById('adm-active').textContent = allBarbers.filter(b => b.status === 'active').length;
-  document.getElementById('adm-pending').textContent = allBarbers.filter(b => b.status === 'pending').length;
+  allAdminBarbers = barbers || [];
+  document.getElementById('adm-active').textContent = allAdminBarbers.filter(b=>b.status==='active').length;
+  document.getElementById('adm-pending').textContent = allAdminBarbers.filter(b=>b.status==='pending').length;
+  document.getElementById('adm-deleted').textContent = allAdminBarbers.filter(b=>b.status==='deleted').length;
   document.getElementById('adm-bookings').textContent = bookings?.length || 0;
   renderAdmin();
 }
 
 function adminFilter(f) {
-  adminCurrentFilter = f;
-  ['all', 'active', 'pending', 'deleted'].forEach(t => document.getElementById('at-' + t).classList.toggle('active', t === f));
+  adminFilter_current = f;
+  ['all','active','pending','deleted'].forEach(t => document.getElementById('at-'+t).classList.toggle('active',t===f));
   renderAdmin();
 }
 
 function renderAdmin() {
-  const q = (document.querySelector('.admin-search input')?.value || '').toLowerCase();
-  let list = allBarbers.filter(b => {
-    const mf = adminCurrentFilter === 'all' ? b.status !== 'deleted' : b.status === adminCurrentFilter;
-    const ms = !q || b.name.toLowerCase().includes(q) || (b.salons?.name || '').toLowerCase().includes(q);
+  const q = (document.querySelector('.admin-search input')?.value||'').toLowerCase();
+  let list = allAdminBarbers.filter(b => {
+    const mf = adminFilter_current==='all' ? b.status!=='deleted' : b.status===adminFilter_current;
+    const ms = !q || b.name.toLowerCase().includes(q) || (b.salons?.name||'').toLowerCase().includes(q);
     return mf && ms;
   });
   const t = document.getElementById('admin-table');
   if (!t) return;
-  if (list.length === 0) { t.innerHTML = '<p style="padding:20px;color:var(--gray);text-align:center">No barbers found.</p>'; return; }
+  if (list.length===0) { t.innerHTML='<div class="empty-state">No barbers found</div>'; return; }
   t.innerHTML = list.map(b => `<div class="admin-row">
     <div class="admin-row-info">
       <h4>${b.name}</h4>
-      <p>${b.salons?.name || '—'} · ${b.salons?.city || '—'} · Joined ${b.created_at?.split('T')[0] || '—'}</p>
+      <p>${b.salons?.name||'—'} · ${b.salons?.city||'—'} · Joined ${b.created_at?.split('T')[0]||'—'}</p>
     </div>
     <div class="admin-actions">
-      <span class="status-pill ${b.status}">${b.status.charAt(0).toUpperCase() + b.status.slice(1)}</span>
-      ${b.status === 'pending' ? `<button class="btn-approve" onclick="adminApprove('${b.id}', '${b.salon_id}')">Approve</button>` : ''}
-      ${b.status === 'active' ? `<button class="btn-suspend" onclick="adminSuspend('${b.id}', '${b.salon_id}')">Suspend</button>` : ''}
-      ${b.status !== 'deleted' ? `<button class="btn-delete" onclick="showDeleteModal('${b.id}')">Delete</button>` : `<button class="btn-restore" onclick="adminRestore('${b.id}', '${b.salon_id}')">Restore</button>`}
+      <span class="sp ${b.status}">${b.status.charAt(0).toUpperCase()+b.status.slice(1)}</span>
+      ${b.status==='pending'?`<button class="btn-approve" onclick="adminApprove('${b.id}','${b.salon_id}')">Approve</button>`:''}
+      ${b.status==='active'?`<button class="btn-suspend" onclick="adminSuspend('${b.id}','${b.salon_id}')">Suspend</button>`:''}
+      ${b.status!=='deleted'?`<button class="btn-delete" onclick="showDelModal('${b.id}','${b.name}')">Delete</button>`:`<button class="btn-restore" onclick="adminRestore('${b.id}','${b.salon_id}')">Restore</button>`}
     </div>
   </div>`).join('');
 }
 
-async function adminApprove(barberId, salonId) {
-  await db.from('barbers').update({ status: 'active' }).eq('id', barberId);
-  await db.from('salons').update({ status: 'active' }).eq('id', salonId);
-  toast('Barber approved and now live!');
-  loadAdmin();
+async function adminApprove(bid, sid) {
+  await db.from('barbers').update({status:'active'}).eq('id',bid);
+  await db.from('salons').update({status:'active'}).eq('id',sid);
+  toast('Barber approved and now live!'); loadAdmin();
 }
-
-async function adminSuspend(barberId, salonId) {
-  await db.from('barbers').update({ status: 'pending' }).eq('id', barberId);
-  await db.from('salons').update({ status: 'pending' }).eq('id', salonId);
-  toast('Barber suspended.');
-  loadAdmin();
+async function adminSuspend(bid, sid) {
+  await db.from('barbers').update({status:'pending'}).eq('id',bid);
+  await db.from('salons').update({status:'pending'}).eq('id',sid);
+  toast('Barber suspended.'); loadAdmin();
 }
-
-async function adminRestore(barberId, salonId) {
-  await db.from('barbers').update({ status: 'active' }).eq('id', barberId);
-  await db.from('salons').update({ status: 'active' }).eq('id', salonId);
-  toast('Barber restored and live!');
-  loadAdmin();
+async function adminRestore(bid, sid) {
+  await db.from('barbers').update({status:'active'}).eq('id',bid);
+  await db.from('salons').update({status:'active'}).eq('id',sid);
+  toast('Barber restored!'); loadAdmin();
 }
-
-function showDeleteModal(id) {
+function showDelModal(id, name) {
   deleteTargetId = id;
-  const b = allBarbers.find(x => x.id === id);
-  document.getElementById('modal-title').textContent = `Delete ${b?.name}?`;
+  document.getElementById('del-title').textContent = `Delete ${name}?`;
   document.getElementById('delete-modal').classList.add('show');
 }
-
-function closeModal() { document.getElementById('delete-modal').classList.remove('show'); }
-
 async function doDelete() {
-  await db.from('barbers').update({ status: 'deleted' }).eq('id', deleteTargetId);
-  closeModal();
-  toast('Barber deleted.');
-  loadAdmin();
+  await db.from('barbers').update({status:'deleted'}).eq('id',deleteTargetId);
+  document.getElementById('delete-modal').classList.remove('show');
+  toast('Barber deleted.'); loadAdmin();
 }
 
-// ── INIT ──
-// This runs as soon as the page loads.
-loadHomeStats();
-regTab('profile');
+// ── UTILS ────────────────────────────────────────────────────
+// Generate array of time strings between start and end
+function generateTimes(start, end, intervalMins) {
+  const times = [];
+  let [h,m] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  while(h<eh || (h===eh&&m<em)) {
+    times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    m += intervalMins;
+    if(m>=60){h++;m-=60;}
+  }
+  return times;
+}
 
-// ── SECRET ADMIN ACCESS ──
-// The hash is the part of the URL after the # symbol.
-// Example: yoursite.com#admin-trimly2026
-// We check the hash every time the page loads AND every time
-// the hash changes (in case someone types it in while on the site).
+// Toast notification
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3200);
+}
 
-const SECRET_HASH = '#admin-trimly2026'; // Change this to whatever you want
-
-function checkAdminAccess() {
-  if (window.location.hash === SECRET_HASH) {
-    // Hash matches — show admin page
+// Secret admin access via URL hash
+function checkAdminHash() {
+  if (window.location.hash === ADMIN_SECRET) {
+    history.replaceState(null,'',window.location.pathname);
     nav('admin');
-    // Clear the hash from the URL so it's not visible in the address bar
-    // after the page loads. Keeps it cleaner.
-    history.replaceState(null, '', window.location.pathname);
   }
 }
 
-// Check on page load
-checkAdminAccess();
+// ── INIT ─────────────────────────────────────────────────────
+// Everything that runs when the page first loads
+(async function init() {
+  await checkAuth();       // Check if barber is logged in
+  loadHomeStats();         // Load live stats for homepage
+  checkAdminHash();        // Check for secret admin link
+  showLoginTab('login');   // Set up login form
+  regTab('profile');       // Set up register form
+})();
 
-// Also check if hash changes while user is on the site
-window.addEventListener('hashchange', checkAdminAccess);
+// Listen for hash changes (in case user types admin link while already on site)
+window.addEventListener('hashchange', checkAdminHash);
 </script>
+
 </body>
 </html>
