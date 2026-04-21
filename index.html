@@ -1,71 +1,4 @@
 <!DOCTYPE html>
-<!--
-================================================================
-KAVRO.CLUB — COMPLETE PROJECT FILE v2.0.0
-================================================================
-SECURITY AUDIT REPORT:
-  [OK] Supabase anon key is public by design — safe in frontend
-  [OK] Rate limiting implemented on login (5 attempts / 15 min)
-  [OK] All user inputs sanitized and length-limited
-  [OK] XSS protection on all rendered user content
-  [OK] Admin access via secret hash — not exposed in nav
-  [OK] No service_role/secret keys in frontend code
-  [PENDING] Enable RLS in Supabase for production security
-  [PENDING] Move to React + env vars for enterprise security
-  [INFO] Anon key is intentionally public per Supabase design
-
-WHATSAPP: +994 50 342 48 80 / +994 51 300 42 19
-SUBSCRIPTION: 25 AZN / month
-
-SQL SCHEMA (run in Supabase SQL Editor):
-================================================================
-  create table if not exists salons (
-    id uuid default gen_random_uuid() primary key,
-    name text not null, city text not null, phone text,
-    about text, status text default 'pending',
-    from_price numeric default 0, rating numeric default 0,
-    created_at timestamp default now()
-  );
-  create table if not exists barbers (
-    id uuid default gen_random_uuid() primary key,
-    salon_id uuid references salons(id) on delete cascade,
-    name text not null, email text, specialty text,
-    work_days text[], start_time text default '10:00',
-    end_time text default '22:00', buffer_minutes int default 10,
-    status text default 'pending', location text, photo_url text,
-    rating numeric default 0, review_count int default 0,
-    paid_until date, created_at timestamp default now()
-  );
-  create table if not exists services (
-    id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id) on delete cascade,
-    name text not null, price numeric not null,
-    duration_minutes int default 30
-  );
-  create table if not exists bookings (
-    id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id),
-    service_id uuid references services(id),
-    client_name text not null, client_phone text not null,
-    date date not null, time text not null,
-    status text default 'confirmed',
-    payment_method text default 'cash',
-    created_at timestamp default now()
-  );
-  create table if not exists reviews (
-    id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id),
-    booking_id uuid references bookings(id),
-    client_name text not null,
-    rating int not null check (rating >= 1 and rating <= 5),
-    comment text, created_at timestamp default now()
-  );
-  alter table barbers add column if not exists email text;
-  alter table barbers add column if not exists location text;
-  alter table barbers add column if not exists photo_url text;
-  alter table barbers add column if not exists review_count int default 0;
-================================================================
--->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -826,6 +759,17 @@ function setLang(lang, btn) {
   });
   const si = document.getElementById('barber-search');
   if (si) si.placeholder = lang==='az'?'Bərbər, salon axtar...':lang==='ru'?'Поиск барберов...':'Search barbers, salons...';
+  // Re-render active reg tab so inner content translates
+  const activeRegTab = document.querySelector('.rsb.active');
+  if (activeRegTab && document.getElementById('page-register').classList.contains('active')) {
+    const tabId = activeRegTab.id.replace('rs-','');
+    regTab(tabId);
+  }
+  // Re-render login tab
+  const activeLoginTab = document.querySelector('.ltab.active');
+  if (activeLoginTab && document.getElementById('page-login').classList.contains('active')) {
+    showLoginTab(activeLoginTab.id === 'lt-login' ? 'login' : 'signup');
+  }
 }
 
 // ── NAV ──
@@ -1161,8 +1105,13 @@ async function submitReview() {
 // ── REGISTER ──
 function regTab(tab) {
   ['profile','schedule','services','payment'].forEach(t=>document.getElementById('rs-'+t).classList.toggle('active',t===tab));
-  const c=document.getElementById('reg-content');
+  // Update tab labels to current language
   const Tc=T[currentLang];
+  document.getElementById('rs-profile').textContent=Tc['tab1']||'Profile';
+  document.getElementById('rs-schedule').textContent=Tc['tab2']||'Schedule';
+  document.getElementById('rs-services').textContent=Tc['tab3']||'Services';
+  document.getElementById('rs-payment').textContent=Tc['tab4']||'Payment';
+  const c=document.getElementById('reg-content');
   if (tab==='profile') {
     c.innerHTML=`<div class="card-box">
       <div class="fg"><label class="fl">Photo (optional)</label>
@@ -1271,7 +1220,7 @@ async function submitRegistration() {
   if(btn){btn.disabled=true;btn.textContent='Submitting...';}
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
   if (salonErr){toast('Error submitting. Please try again.');if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
-  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0 }).select().single();
+  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone }).select().single();
   if (barberErr){toast('Error saving barber. Please try again.');return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
