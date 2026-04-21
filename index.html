@@ -74,7 +74,7 @@ SQL SCHEMA (run in Supabase SQL Editor):
 <meta name="description" content="Find and book the best barbers in Baku, Azerbaijan. Real-time slots, instant confirmation.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --green:#1a9e6e;--green-dark:#0d6e4a;--green-light:#e6f7f1;--green-mid:#a8e0cc;
@@ -1253,12 +1253,26 @@ function regTab(tab) {
   }
 }
 
-function previewPhoto(input) {
+async function previewPhoto(input) {
   const file=input.files[0]; if(!file) return;
   if (file.size>5*1024*1024) { toast('Photo must be under 5MB'); return; }
+  // Show preview immediately
   const reader=new FileReader();
-  reader.onload=e=>{const img=document.getElementById('photo-preview-img');img.src=e.target.result;img.style.display='block';regForm.photoUrl=e.target.result;};
+  reader.onload=e=>{
+    const img=document.getElementById('photo-preview-img');
+    img.src=e.target.result;img.style.display='block';
+  };
   reader.readAsDataURL(file);
+  // Upload to Supabase Storage
+  toast('Uploading photo...');
+  const fileExt=file.name.split('.').pop();
+  const fileName=`barber_${Date.now()}.${fileExt}`;
+  const { data, error } = await db.storage.from('photos').upload(fileName, file, { upsert:true, contentType:file.type });
+  if (error) { toast('Photo upload failed: '+error.message); return; }
+  // Get public URL
+  const { data:urlData } = db.storage.from('photos').getPublicUrl(fileName);
+  regForm.photoUrl = urlData.publicUrl;
+  toast('Photo uploaded successfully!');
 }
 
 function saveProfileTab() {
@@ -1287,7 +1301,7 @@ async function submitRegistration() {
   if(btn){btn.disabled=true;btn.textContent='Submitting...';}
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
   if (salonErr){toast('Salon error: ' + (salonErr.message||salonErr.code||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
-  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone }).select().single();
+  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
   if (barberErr){toast('Barber error: ' + (barberErr.message||barberErr.code||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
