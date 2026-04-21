@@ -64,6 +64,15 @@ SQL SCHEMA (run in Supabase SQL Editor):
   alter table barbers add column if not exists location text;
   alter table barbers add column if not exists photo_url text;
   alter table barbers add column if not exists review_count int default 0;
+
+  -- Portfolio table (run this too):
+  create table if not exists portfolio (
+    id uuid default gen_random_uuid() primary key,
+    barber_id uuid references barbers(id) on delete cascade,
+    photo_url text not null,
+    caption text,
+    created_at timestamp default now()
+  );
 ================================================================
 -->
 <html lang="en">
@@ -329,6 +338,57 @@ textarea.ff{resize:vertical;min-height:80px}
 .urgent-result{background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:14px;margin-top:14px}
 .urgent-result h4{font-size:15px;font-weight:600;margin-bottom:4px}
 .urgent-result p{font-size:13px;color:var(--gray);margin-bottom:0}
+.barber-profile-layout{max-width:860px;margin:0 auto;padding:40px 24px}
+.profile-hero{display:grid;grid-template-columns:200px 1fr;gap:32px;margin-bottom:36px;align-items:start}
+@media(max-width:640px){.profile-hero{grid-template-columns:1fr;text-align:center}}
+.profile-photo{width:200px;height:200px;border-radius:16px;object-fit:cover;background:linear-gradient(135deg,#1a2a1a,#0d3d28);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:72px;color:rgba(255,255,255,0.25);flex-shrink:0}
+.profile-photo img{width:100%;height:100%;object-fit:cover;border-radius:16px}
+.profile-info h1{font-family:'DM Serif Display',serif;font-size:32px;letter-spacing:-0.5px;margin-bottom:6px}
+.profile-salon{font-size:15px;color:var(--green);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.profile-salon svg{width:14px;height:14px;stroke:var(--green);fill:none;stroke-width:2}
+.profile-specialty{font-size:14px;color:var(--gray);margin-bottom:14px}
+.profile-stats{display:flex;gap:24px;margin-bottom:20px;flex-wrap:wrap}
+.profile-stat{text-align:center}
+.profile-stat .val{font-family:'DM Serif Display',serif;font-size:24px;display:block}
+.profile-stat .lbl{font-size:12px;color:var(--gray)}
+.profile-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.profile-tag{background:var(--green-light);color:var(--green-dark);font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500}
+.profile-about{font-size:14px;color:var(--gray);line-height:1.7;margin-bottom:20px}
+.profile-meta{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.profile-meta-row{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--gray)}
+.profile-meta-row svg{width:15px;height:15px;stroke:var(--green);fill:none;stroke-width:2;flex-shrink:0}
+.book-now-btn{background:var(--green);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:16px;font-weight:500;cursor:pointer;transition:all .2s;width:100%}
+.book-now-btn:hover{background:var(--green-dark);transform:translateY(-1px)}
+.portfolio-section{margin-bottom:36px}
+.portfolio-section h2{font-family:'DM Serif Display',serif;font-size:22px;letter-spacing:-0.5px;margin-bottom:16px}
+.portfolio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:480px){.portfolio-grid{grid-template-columns:repeat(2,1fr)}}
+.portfolio-item{aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--gray-light);cursor:pointer;transition:transform .2s}
+.portfolio-item:hover{transform:scale(1.02)}
+.portfolio-item img{width:100%;height:100%;object-fit:cover}
+.portfolio-empty{background:var(--gray-light);border-radius:10px;padding:32px;text-align:center;color:var(--gray);font-size:14px;grid-column:1/-1}
+.reviews-section{margin-bottom:36px}
+.reviews-section h2{font-family:'DM Serif Display',serif;font-size:22px;letter-spacing:-0.5px;margin-bottom:16px}
+.review-card{background:white;border:1px solid var(--gray-border);border-radius:12px;padding:16px;margin-bottom:10px}
+.review-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.review-card-author{font-size:14px;font-weight:600}
+.review-card-stars{color:var(--gold);font-size:14px}
+.review-card-text{font-size:13px;color:var(--gray);line-height:1.6}
+.review-card-date{font-size:11px;color:#bbb;margin-top:6px}
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center}
+.lightbox.show{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
+.lightbox-close{position:absolute;top:20px;right:20px;background:none;border:none;color:white;font-size:32px;cursor:pointer;line-height:1}
+.upload-portfolio-section{margin-bottom:28px}
+.portfolio-upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:480px){.portfolio-upload-grid{grid-template-columns:repeat(2,1fr)}}
+.portfolio-thumb{aspect-ratio:1;border-radius:10px;overflow:hidden;position:relative;background:var(--gray-light)}
+.portfolio-thumb img{width:100%;height:100%;object-fit:cover}
+.portfolio-thumb-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.add-portfolio-btn{aspect-ratio:1;border-radius:10px;border:2px dashed var(--gray-border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s;background:white;position:relative;font-size:13px;color:var(--gray);gap:6px}
+.add-portfolio-btn:hover{border-color:var(--green);color:var(--green)}
+.add-portfolio-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.add-portfolio-btn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:white;padding:11px 22px;border-radius:10px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
 .toast.show{opacity:1}
 .loading{text-align:center;padding:36px;color:var(--gray);font-size:14px}
@@ -511,6 +571,49 @@ textarea.ff{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- BARBER PROFILE -->
+<div class="page" id="page-profile">
+  <div class="barber-profile-layout">
+    <button class="back-link" onclick="nav('barbers')" style="margin-bottom:24px">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      <span>Back to barbers</span>
+    </button>
+    <div class="profile-hero">
+      <div class="profile-photo" id="pp-photo">A</div>
+      <div class="profile-info">
+        <h1 id="pp-name">Barber Name</h1>
+        <div class="profile-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg><span id="pp-salon">Salon</span></div>
+        <div class="profile-specialty" id="pp-specialty">Specialty</div>
+        <div class="profile-stats">
+          <div class="profile-stat"><span class="val" id="pp-rating">—</span><span class="lbl">Rating</span></div>
+          <div class="profile-stat"><span class="val" id="pp-reviews">0</span><span class="lbl">Reviews</span></div>
+          <div class="profile-stat"><span class="val" id="pp-bookings">0</span><span class="lbl">Bookings</span></div>
+        </div>
+        <div class="profile-meta">
+          <div class="profile-meta-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="pp-hours">—</span></div>
+          <div class="profile-meta-row" id="pp-location-row" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><a id="pp-map-link" href="#" target="_blank" rel="noopener" style="color:var(--green)">View on map</a></div>
+        </div>
+        <div class="profile-about" id="pp-about" style="display:none"></div>
+        <button class="book-now-btn" onclick="bookFromProfile()">Book appointment</button>
+      </div>
+    </div>
+    <div class="portfolio-section">
+      <h2>Portfolio</h2>
+      <div class="portfolio-grid" id="pp-portfolio"><div class="portfolio-empty">No portfolio photos yet</div></div>
+    </div>
+    <div class="reviews-section">
+      <h2>Reviews</h2>
+      <div id="pp-reviews-list"><div class="empty-state">No reviews yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="Portfolio photo">
+</div>
+
 <!-- REGISTER -->
 <div class="page" id="page-register">
   <div class="reg-layout">
@@ -569,6 +672,15 @@ textarea.ff{resize:vertical;min-height:80px}
       </div>
     </div>
     <div style="margin-top:20px"><div class="dash-card"><h3 id="t-dash-all">All bookings</h3><div id="dash-all-bookings"><div class="loading">Loading...</div></div></div></div>
+    <div style="margin-top:20px"><div class="dash-card">
+      <h3>My portfolio</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Upload photos of your best work. Clients see these on your profile before booking.</p>
+      <div class="portfolio-upload-grid" id="dash-portfolio-grid">
+        <label class="add-portfolio-btn"><input type="file" accept="image/*" onchange="uploadPortfolioPhoto(this)">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add photo</label>
+      </div>
+    </div></div>
   </div>
 </div>
 
@@ -1015,7 +1127,7 @@ function renderBarbers() {
     const rankClass=i===0?'rank-1':'';
     const photoEl=b.photo_url?`<img src="${b.photo_url}" alt="${sanitize(b.name)}" loading="lazy">`:sanitize(b.name[0]);
     const mapsUrl=b.location?`https://www.google.com/maps/search/${encodeURIComponent(b.location+' Baku')}`:null;
-    return `<div class="barber-card" onclick="startBookingBarber('${b.id}','${sanitize(b.name)}','${sanitize(b.salons?.name||'')}')">
+    return `<div class="barber-card" onclick="openBarberProfile('${b.id}')">
       <div class="bc-photo">${photoEl}<div class="rank-badge ${rankClass}">#${i+1}</div></div>
       <div class="bc-body">
         <div class="bc-name">${sanitize(b.name)}</div>
@@ -1354,6 +1466,7 @@ async function loadDashboard() {
     <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.date} · ${b.time} · ${sanitize(b.client_phone)}</div></div>
     <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Cancelled':(b.services?.price||0)+' AZN'}</span>
   </div>`).join(''):'<div class="empty-state">No bookings yet</div>';
+  await loadDashPortfolio();
 }
 
 // ── ADMIN ──
@@ -1403,6 +1516,144 @@ async function adminSuspend(bid,sid){await db.from('barbers').update({status:'pe
 async function adminRestore(bid,sid){await db.from('barbers').update({status:'active'}).eq('id',bid);await db.from('salons').update({status:'active'}).eq('id',sid);toast('Barber restored!');loadAdmin();}
 function showDelModal(id,name){deleteTargetId=id;document.getElementById('del-title').textContent=`Delete ${name}?`;openModal('delete-modal');}
 async function doDelete(){await db.from('barbers').update({status:'deleted'}).eq('id',deleteTargetId);closeModal('delete-modal');toast('Barber deleted.');loadAdmin();}
+
+// ── BARBER PROFILE PAGE ──
+let currentProfileBarber = null;
+
+async function openBarberProfile(barberId) {
+  nav('profile');
+  // Load barber data
+  const { data:barber } = await db.from('barbers')
+    .select('*, salons(name,city)')
+    .eq('id', barberId).single();
+  if (!barber) { toast('Could not load barber profile'); nav('barbers'); return; }
+  currentProfileBarber = barber;
+  // Set photo
+  const photoEl = document.getElementById('pp-photo');
+  if (barber.photo_url) {
+    photoEl.innerHTML = `<img src="${barber.photo_url}" alt="${sanitize(barber.name)}">`;
+  } else {
+    photoEl.textContent = barber.name[0];
+  }
+  // Set info
+  document.getElementById('pp-name').textContent = sanitize(barber.name);
+  document.getElementById('pp-salon').textContent = sanitize(barber.salons?.name || 'Independent');
+  document.getElementById('pp-specialty').textContent = sanitize(barber.specialty || 'All styles') + ' · ' + sanitize(barber.salons?.city || 'Baku');
+  document.getElementById('pp-rating').textContent = barber.rating > 0 ? barber.rating.toFixed(1) + '★' : 'New';
+  document.getElementById('pp-reviews').textContent = barber.review_count || 0;
+  // Hours
+  const days = (barber.work_days || []).join(', ');
+  document.getElementById('pp-hours').textContent = `${days} · ${barber.start_time || '10:00'} – ${barber.end_time || '22:00'}`;
+  // Location
+  if (barber.location) {
+    const locRow = document.getElementById('pp-location-row');
+    locRow.style.display = 'flex';
+    document.getElementById('pp-map-link').href = `https://www.google.com/maps/search/${encodeURIComponent(barber.location + ' Baku')}`;
+    document.getElementById('pp-map-link').textContent = sanitize(barber.location);
+  }
+  // About
+  if (barber.about) {
+    const aboutEl = document.getElementById('pp-about');
+    aboutEl.style.display = 'block';
+    aboutEl.textContent = sanitize(barber.about, 500);
+  }
+  // Load bookings count
+  const { count } = await db.from('bookings').select('id', {count:'exact'}).eq('barber_id', barberId).eq('status','confirmed');
+  document.getElementById('pp-bookings').textContent = count || 0;
+  // Load portfolio
+  loadPortfolio(barberId);
+  // Load reviews
+  loadProfileReviews(barberId);
+}
+
+async function loadPortfolio(barberId) {
+  const grid = document.getElementById('pp-portfolio');
+  const { data:photos } = await db.from('portfolio').select('*').eq('barber_id', barberId).order('created_at', {ascending:false});
+  if (!photos || photos.length === 0) {
+    grid.innerHTML = '<div class="portfolio-empty">No portfolio photos yet</div>';
+    return;
+  }
+  grid.innerHTML = photos.map(p => `<div class="portfolio-item" onclick="openLightbox('${p.photo_url}')">
+    <img src="${p.photo_url}" alt="${sanitize(p.caption||'Work photo')}" loading="lazy">
+  </div>`).join('');
+}
+
+async function loadProfileReviews(barberId) {
+  const { data:reviews } = await db.from('reviews').select('*').eq('barber_id', barberId).order('created_at', {ascending:false}).limit(10);
+  const el = document.getElementById('pp-reviews-list');
+  if (!reviews || reviews.length === 0) {
+    el.innerHTML = '<div class="empty-state">No reviews yet — be the first to review!</div>';
+    return;
+  }
+  el.innerHTML = reviews.map(r => `<div class="review-card">
+    <div class="review-card-header">
+      <span class="review-card-author">${sanitize(r.client_name)}</span>
+      <span class="review-card-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+    </div>
+    ${r.comment ? `<div class="review-card-text">${sanitize(r.comment, 300)}</div>` : ''}
+    <div class="review-card-date">${r.created_at?.split('T')[0] || ''}</div>
+  </div>`).join('');
+}
+
+function bookFromProfile() {
+  if (!currentProfileBarber) return;
+  startBookingBarber(currentProfileBarber.id, currentProfileBarber.name, currentProfileBarber.salons?.name || '');
+}
+
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ── PORTFOLIO UPLOAD (from dashboard) ──
+let portfolioUploads = []; // {url, id} of uploaded photos
+
+async function uploadPortfolioPhoto(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 5*1024*1024) { toast('Photo must be under 5MB'); return; }
+  toast('Uploading...');
+  const fileName = `portfolio_${Date.now()}.${file.name.split('.').pop()}`;
+  const { error } = await db.storage.from('photos').upload(fileName, file, { upsert:true, contentType:file.type });
+  if (error) { toast('Upload failed: ' + error.message); return; }
+  const { data:urlData } = db.storage.from('photos').getPublicUrl(fileName);
+  const photoUrl = urlData.publicUrl;
+  // Save to portfolio table
+  if (currentBarberProfile) {
+    const { data:p } = await db.from('portfolio').insert({ barber_id:currentBarberProfile.id, photo_url:photoUrl }).select().single();
+    if (p) portfolioUploads.push({url:photoUrl, id:p.id});
+  }
+  toast('Photo added to portfolio!');
+  renderDashPortfolio();
+}
+
+async function deletePortfolioPhoto(photoId) {
+  await db.from('portfolio').delete().eq('id', photoId);
+  portfolioUploads = portfolioUploads.filter(p => p.id !== photoId);
+  toast('Photo removed.');
+  renderDashPortfolio();
+}
+
+function renderDashPortfolio() {
+  const el = document.getElementById('dash-portfolio-grid');
+  if (!el) return;
+  const thumbs = portfolioUploads.map(p => `<div class="portfolio-thumb">
+    <img src="${p.url}" loading="lazy">
+    <button class="portfolio-thumb-del" onclick="deletePortfolioPhoto('${p.id}')">×</button>
+  </div>`).join('');
+  el.innerHTML = thumbs + `<label class="add-portfolio-btn">
+    <input type="file" accept="image/*" onchange="uploadPortfolioPhoto(this)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add photo
+  </label>`;
+}
+
+async function loadDashPortfolio() {
+  if (!currentBarberProfile) return;
+  const { data:photos } = await db.from('portfolio').select('*').eq('barber_id', currentBarberProfile.id).order('created_at', {ascending:false});
+  portfolioUploads = (photos || []).map(p => ({url:p.photo_url, id:p.id}));
+  renderDashPortfolio();
+}
 
 // ── UTILS ──
 function generateTimes(start,end,intervalMins){
