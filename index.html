@@ -1296,8 +1296,8 @@ function regTab(tab) {
       <div class="fg"><label class="fl">Photo (optional)</label>
         <div class="photo-upload"><input type="file" accept="image/*" onchange="previewPhoto(this)">
           <svg width="32" height="32" fill="none" stroke="var(--gray)" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <p>Upload your photo or salon photo</p></div>
-        <img id="photo-preview-img" class="photo-preview" style="display:none">
+          <p>${regForm.photoUrl ? 'Photo uploaded ✓ — tap to change' : 'Upload your photo or salon photo'}</p></div>
+        <img id="photo-preview-img" class="photo-preview" style="display:${regForm.photoUrl?'block':'none'}" src="${regForm.photoUrl||''}">
       </div>
       <div class="f2col">
         <div class="fg"><label class="fl">Full name *</label><input class="ff" id="rf-name" placeholder="e.g. Anar Huseynov" value="${sanitize(regForm.name)}" maxlength="100"></div>
@@ -1372,23 +1372,28 @@ function regTab(tab) {
 async function previewPhoto(input) {
   const file=input.files[0]; if(!file) return;
   if (file.size>5*1024*1024) { toast('Photo must be under 5MB'); return; }
-  // Show preview immediately
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const img=document.getElementById('photo-preview-img');
-    img.src=e.target.result;img.style.display='block';
-  };
-  reader.readAsDataURL(file);
+  // Show preview immediately using local URL
+  const localUrl = URL.createObjectURL(file);
+  const img=document.getElementById('photo-preview-img');
+  if(img){img.src=localUrl;img.style.display='block';}
+  // Also update the label
+  const label=document.querySelector('.photo-upload p');
+  if(label) label.textContent='Uploading...';
   // Upload to Supabase Storage
-  toast('Uploading photo...');
-  const fileExt=file.name.split('.').pop();
-  const fileName=`barber_${Date.now()}.${fileExt}`;
+  const fileExt=file.name.split('.').pop().toLowerCase();
+  const fileName=`barber_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
   const { data, error } = await db.storage.from('photos').upload(fileName, file, { upsert:true, contentType:file.type });
-  if (error) { toast('Photo upload failed: '+error.message); return; }
-  // Get public URL
+  if (error) {
+    toast('Photo upload failed: '+error.message);
+    if(label) label.textContent='Upload failed — tap to try again';
+    regForm.photoUrl='';
+    return;
+  }
+  // Get permanent public URL and save to regForm
   const { data:urlData } = db.storage.from('photos').getPublicUrl(fileName);
   regForm.photoUrl = urlData.publicUrl;
-  toast('Photo uploaded successfully!');
+  if(label) label.textContent='Photo uploaded ✓ — tap to change';
+  toast('Photo uploaded!');
 }
 
 function saveProfileTab() {
@@ -1423,15 +1428,27 @@ async function submitRegistration() {
   const { data:authData, error:authErr } = await db.auth.signUp({
     email: regForm.email,
     password: regForm.password,
-    options: { data: { name: regForm.name } }
+    options: {
+      data: { name: regForm.name },
+      emailRedirectTo: null
+    }
   });
   if (authErr) {
-    // If email already exists, still continue — they can use login page
-    if (!authErr.message.includes('already registered')) {
+    if (authErr.message.includes('rate limit') || authErr.message.includes('Rate limit')) {
+      // Rate limited — account may already exist, try to sign in to verify
+      const { error:signInErr } = await db.auth.signInWithPassword({ email:regForm.email, password:regForm.password });
+      if (signInErr) {
+        toast('Too many attempts. Please wait a few minutes and try again.');
+        if(btn){btn.disabled=false;btn.textContent='Submit registration';}
+        return;
+      }
+      // Sign in worked — account exists, continue saving profile
+    } else if (!authErr.message.includes('already registered') && !authErr.message.includes('User already registered')) {
       toast('Account error: ' + authErr.message);
       if(btn){btn.disabled=false;btn.textContent='Submit registration';}
       return;
     }
+    // Email already registered — that's fine, continue saving profile
   }
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
   if (salonErr){toast('Salon error: ' + (salonErr.message||salonErr.code||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
@@ -1439,7 +1456,8 @@ async function submitRegistration() {
   if (barberErr){toast('Barber error: ' + (barberErr.message||barberErr.code||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
-  toast('Registration submitted! We will contact you within 24 hours.');
+  const photoStatus = regForm.photoUrl ? ' Your photo has been saved.' : '';
+  toast('Registration submitted! Contact us on WhatsApp to activate.' + photoStatus);
   regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'',email:'',password:''};
   regServices=[{n:'Haircut',p:'10'}];
   activeDays=['Tue','Wed','Thu','Fri','Sat','Sun'];
