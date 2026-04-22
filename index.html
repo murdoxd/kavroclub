@@ -779,7 +779,7 @@ let reviewTargetBookingId = null;
 let reviewTargetBarberId = null;
 let selectedRating = 0;
 let bState = { barber:null, barberId:null, salonName:null, service:null, serviceId:null, servicePrice:null, serviceDur:null, time:null, date:0, step:0 };
-let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'' };
+let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'', email:'', password:'' };
 let regServices = [{ n:'Haircut', p:'10' }, { n:'Beard trim', p:'5' }];
 let activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
 const regDaysAll = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1303,6 +1303,10 @@ function regTab(tab) {
         <div class="fg"><label class="fl">Full name *</label><input class="ff" id="rf-name" placeholder="e.g. Anar Huseynov" value="${sanitize(regForm.name)}" maxlength="100"></div>
         <div class="fg"><label class="fl">Salon name *</label><input class="ff" id="rf-salon" placeholder="e.g. Alpha Barbershop" value="${sanitize(regForm.salon)}" maxlength="100"></div>
       </div>
+      <div class="f2col">
+        <div class="fg"><label class="fl">Email * (for login)</label><input class="ff" id="rf-email" placeholder="your@email.com" type="email" value="${sanitize(regForm.email)}" maxlength="200"></div>
+        <div class="fg"><label class="fl">Password * (min 6 chars)</label><input class="ff" id="rf-password" placeholder="Create a password" type="password" value="${regForm.password}" maxlength="100"></div>
+      </div>
       <div class="fg"><label class="fl">City / District *</label><input class="ff" id="rf-city" placeholder="e.g. Baku, Narimanov district" value="${sanitize(regForm.city)}" maxlength="100"></div>
       <div class="fg"><label class="fl">Phone number *</label><input class="ff" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${sanitize(regForm.phone)}" maxlength="20"></div>
       <div class="fg"><label class="fl">Location / Address (for map)</label><input class="ff" id="rf-location" placeholder="e.g. Nizami Street 45, Baku" value="${sanitize(regForm.location)}" maxlength="200"></div>
@@ -1390,12 +1394,16 @@ async function previewPhoto(input) {
 function saveProfileTab() {
   regForm.name=sanitize(document.getElementById('rf-name')?.value.trim()||'',100);
   regForm.salon=sanitize(document.getElementById('rf-salon')?.value.trim()||'',100);
+  regForm.email=(document.getElementById('rf-email')?.value.trim()||'').toLowerCase();
+  regForm.password=document.getElementById('rf-password')?.value||'';
   regForm.city=sanitize(document.getElementById('rf-city')?.value.trim()||'',100);
   regForm.phone=sanitizePhone(document.getElementById('rf-phone')?.value.trim()||'');
   regForm.location=sanitize(document.getElementById('rf-location')?.value.trim()||'',200);
   regForm.specialty=sanitize(document.getElementById('rf-specialty')?.value.trim()||'',100);
   regForm.about=sanitize(document.getElementById('rf-about')?.value.trim()||'',500);
   if (!regForm.name||!regForm.salon||!regForm.city||!regForm.phone) { toast('Please fill in all required fields (*)'); return; }
+  if (!regForm.email||!validateEmail(regForm.email)) { toast('Please enter a valid email address'); return; }
+  if (!regForm.password||regForm.password.length<6) { toast('Password must be at least 6 characters'); return; }
   regTab('schedule');
 }
 
@@ -1411,14 +1419,28 @@ async function submitRegistration() {
   if (!regForm.name||!regForm.salon) { toast('Please complete your profile first'); regTab('profile'); return; }
   const btn=document.querySelector('#page-register .btn-main.green');
   if(btn){btn.disabled=true;btn.textContent='Submitting...';}
+  // Create Supabase Auth account for barber login
+  const { data:authData, error:authErr } = await db.auth.signUp({
+    email: regForm.email,
+    password: regForm.password,
+    options: { data: { name: regForm.name } }
+  });
+  if (authErr) {
+    // If email already exists, still continue — they can use login page
+    if (!authErr.message.includes('already registered')) {
+      toast('Account error: ' + authErr.message);
+      if(btn){btn.disabled=false;btn.textContent='Submit registration';}
+      return;
+    }
+  }
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
   if (salonErr){toast('Salon error: ' + (salonErr.message||salonErr.code||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
-  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
+  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, email:regForm.email, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
   if (barberErr){toast('Barber error: ' + (barberErr.message||barberErr.code||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
   toast('Registration submitted! We will contact you within 24 hours.');
-  regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:''};
+  regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'',email:'',password:''};
   regServices=[{n:'Haircut',p:'10'}];
   activeDays=['Tue','Wed','Thu','Fri','Sat','Sun'];
   regTab('profile');
