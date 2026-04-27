@@ -834,6 +834,17 @@ const T = {
     'review-label':'Comment (optional)',
     'cancel-title':'Cancel booking?','cancel-desc':'This will free up the time slot.',
     'fall':'All','ftop':'Top rated',
+    'book-now':'Book appointment',
+    'portfolio-title':'Portfolio','portfolio-empty':'No portfolio photos yet',
+    'reviews-title':'Reviews','reviews-empty':'No reviews yet — be the first!',
+    'leave-review':'Leave a review',
+    'back-barbers':'Back to barbers',
+    'review-phone':'Your phone number (to verify your booking)',
+    'confirm-barber':'Barber','confirm-salon':'Salon','confirm-service':'Service',
+    'confirm-time':'Time','confirm-price':'Price','confirm-payment':'Payment',
+    'confirm-btn':'Confirm booking',
+    'success-title':"You're booked!",'success-sub':'has been notified. See you soon.',
+    'reg-profile':'Profile','reg-schedule':'Schedule','reg-services':'Services','reg-payment':'Payment',
   },
   az: {
     'hero-tag':'İndi Bakıda, Azərbaycanda',
@@ -867,6 +878,17 @@ const T = {
     'review-label':'Şərh (isteğe bağlı)',
     'cancel-title':'Sifarişi ləğv et?','cancel-desc':'Bu zaman slotu azad ediləcək.',
     'fall':'Hamısı','ftop':'Ən yüksək',
+    'book-now':'Görüş sifariş et',
+    'portfolio-title':'Portfolio','portfolio-empty':'Hələ portfolio şəkli yoxdur',
+    'reviews-title':'Rəylər','reviews-empty':'Hələ rəy yoxdur — ilk siz olun!',
+    'leave-review':'Rəy buraxın',
+    'back-barbers':'Bərbərlərə qayıt',
+    'review-phone':'Telefon nömrəniz (sifarişi doğrulamaq üçün)',
+    'confirm-barber':'Bərbər','confirm-salon':'Salon','confirm-service':'Xidmət',
+    'confirm-time':'Vaxt','confirm-price':'Qiymət','confirm-payment':'Ödəniş',
+    'confirm-btn':'Sifarişi təsdiqlə',
+    'success-title':'Sifarişiniz qeydə alındı!','success-sub':'xəbərdar edildi. Tezliklə görüşərik.',
+    'reg-profile':'Profil','reg-schedule':'Cədvəl','reg-services':'Xidmətlər','reg-payment':'Ödəniş',
   },
   ru: {
     'hero-tag':'Теперь в Баку, Азербайджан',
@@ -900,6 +922,17 @@ const T = {
     'review-label':'Комментарий (необязательно)',
     'cancel-title':'Отменить запись?','cancel-desc':'Это освободит время для других клиентов.',
     'fall':'Все','ftop':'Топ рейтинг',
+    'book-now':'Записаться',
+    'portfolio-title':'Портфолио','portfolio-empty':'Фото работ пока нет',
+    'reviews-title':'Отзывы','reviews-empty':'Отзывов пока нет — будьте первым!',
+    'leave-review':'Оставить отзыв',
+    'back-barbers':'Назад к барберам',
+    'review-phone':'Ваш номер телефона (для подтверждения записи)',
+    'confirm-barber':'Барбер','confirm-salon':'Салон','confirm-service':'Услуга',
+    'confirm-time':'Время','confirm-price':'Цена','confirm-payment':'Оплата',
+    'confirm-btn':'Подтвердить запись',
+    'success-title':'Вы записаны!','success-sub':'уведомлён. До встречи.',
+    'reg-profile':'Профиль','reg-schedule':'Расписание','reg-services':'Услуги','reg-payment':'Оплата',
   }
 };
 
@@ -927,6 +960,20 @@ const TRANS_MAP = {
   'fall':'fb-all','ftop':'fb-top',
 };
 
+// Apply translations to dynamically rendered pages too
+function applyDynamicTranslations() {
+  const tr = T[currentLang];
+  // Profile page
+  const profileBack = document.querySelector('#page-profile .back-link span');
+  if (profileBack) profileBack.textContent = tr['back-barbers'] || 'Back to barbers';
+  const bookBtn = document.querySelector('.book-now-btn');
+  if (bookBtn) bookBtn.textContent = tr['book-now'] || 'Book appointment';
+  const portfolioH = document.querySelector('.portfolio-section h2');
+  if (portfolioH) portfolioH.textContent = tr['portfolio-title'] || 'Portfolio';
+  const reviewsH = document.querySelector('.reviews-section h2');
+  if (reviewsH) reviewsH.textContent = tr['reviews-title'] || 'Reviews';
+}
+
 function setLang(lang, btn) {
   currentLang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
@@ -938,6 +985,8 @@ function setLang(lang, btn) {
   });
   const si = document.getElementById('barber-search');
   if (si) si.placeholder = lang==='az'?'Bərbər, salon axtar...':lang==='ru'?'Поиск барберов...':'Search barbers, salons...';
+  // Apply to dynamic pages
+  applyDynamicTranslations();
   // Re-render active reg tab so inner content translates
   const activeRegTab = document.querySelector('.rsb.active');
   if (activeRegTab && document.getElementById('page-register').classList.contains('active')) {
@@ -1171,19 +1220,55 @@ async function renderBooking() {
         <div class="svc-pr">${sv.price} AZN</div>
       </div>`).join('');
   } else if (bState.step===1) {
-    const dateStr=DATES[bState.date].full;
+    // Refresh DATES every time to always start from today
+    const freshDates = getNextDates();
+    const dateStr = freshDates[bState.date].full;
+    const today = new Date();
+    const nowTime = `${String(today.getHours()).padStart(2,'0')}:${String(today.getMinutes()).padStart(2,'0')}`;
+    // Load barber's working days and start time
+    const { data:barberInfo } = await db.from('barbers').select('work_days,start_time,end_time').eq('id',bState.barberId).single();
+    const workDays = barberInfo?.work_days || [];
+    const startTime = barberInfo?.start_time || '10:00';
+    const endTime = barberInfo?.end_time || '22:00';
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    // Load booked slots for selected date
     const { data:booked } = await db.from('bookings').select('time').eq('barber_id',bState.barberId).eq('date',dateStr).eq('status','confirmed');
     const bookedSlots=(booked||[]).map(b=>b.time);
-    const dateRow=`<div class="date-row">${DATES.map((d,i)=>`<div class="date-chip ${bState.date===i?'sel':''}" onclick="bState.date=${i};renderBooking()"><div class="dd">${d.d}</div><div class="dn">${d.n}</div></div>`).join('')}</div>`;
-    const timeGrid=`<div class="time-grid">${ALL_TIMES.map(t=>`<div class="time-chip ${bookedSlots.includes(t)?'taken':bState.time===t?'sel':''}" onclick="${bookedSlots.includes(t)?'':`pickTime('${t}')`}">${t}</div>`).join('')}</div>`;
-    c.innerHTML=`<div class="slabel">Pick a date & time</div>${dateRow}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← Back</button>`;
+    // Generate times based on barber's actual hours
+    const barberTimes = generateTimes(startTime, endTime, 30);
+    // Build date chips — disable days barber doesn't work
+    const dateRow=`<div class="date-row">${freshDates.map((d,i)=>{
+      const dayName = d.d;
+      const worksThisDay = workDays.length === 0 || workDays.includes(dayName);
+      const isSelected = bState.date===i;
+      return `<div class="date-chip ${isSelected?'sel':''} ${!worksThisDay?'taken':''}"
+        onclick="${worksThisDay?`bState.date=${i};renderBooking()`:''}"
+        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;text-decoration:line-through':''}"
+        title="${!worksThisDay?'Barber does not work this day':''}">
+        <div class="dd">${d.d}</div><div class="dn">${d.n}</div>
+      </div>`;
+    }).join('')}</div>`;
+    // Filter times: hide past times for today, show barber's actual hours
+    const isToday = dateStr === freshDates[0].full;
+    const timeGrid=`<div class="time-grid">${barberTimes.map(t=>{
+      const isPast = isToday && t <= nowTime;
+      const isTaken = bookedSlots.includes(t);
+      const isSelected = bState.time===t;
+      const disabled = isPast || isTaken;
+      return `<div class="time-chip ${isTaken?'taken':isPast?'taken':isSelected?'sel':''}"
+        onclick="${disabled?'':`pickTime('${t}')`}"
+        title="${isPast?'Time already passed':isTaken?'Already booked':''}">${t}</div>`;
+    }).join('')}</div>`;
+    const selectedDayWorks = workDays.length === 0 || workDays.includes(freshDates[bState.date].d);
+    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">Barber does not work on this day. Please select another date.</div>` : '';
+    c.innerHTML=`<div class="slabel">Pick a date & time</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← Back</button>`;
   } else if (bState.step===2) {
     c.innerHTML=`
       <div class="confirm-card">
         <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
         <div class="cr"><span class="lbl">Salon</span><span class="val">${sanitize(bState.salonName||'Independent')}</span></div>
         <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
-        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${DATES[bState.date].d} ${DATES[bState.date].n}</span></div>
+        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
         <div class="cr"><span class="lbl">Price</span><span class="val" style="color:var(--green);font-weight:600">${bState.servicePrice} AZN</span></div>
         <div class="cr"><span class="lbl">Payment</span><span class="val">Cash or card at salon</span></div>
       </div>
@@ -1201,7 +1286,7 @@ async function renderBooking() {
       <div class="confirm-card" style="text-align:left;margin-bottom:18px">
         <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
         <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
-        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${DATES[bState.date].d} ${DATES[bState.date].n}</span></div>
+        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
         <div class="cr" style="border-bottom:none"><span class="lbl">Price</span><span class="val" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
       </div>
       <div class="notif-note">Booking saved. To rate your experience after your appointment, come back and visit the barber's profile.</div>
@@ -1226,9 +1311,64 @@ async function confirmBooking() {
   if (phone.length<6) { toast('Please enter a valid phone number'); return; }
   const btn=document.querySelector('#booking-content .btn-main.green');
   if (btn){btn.disabled=true;btn.textContent='Saving...';}
-  const { error } = await db.from('bookings').insert({ barber_id:bState.barberId, service_id:bState.serviceId, client_name:name, client_phone:phone, date:DATES[bState.date].full, time:bState.time, status:'confirmed', payment_method:'cash' });
+  const { error } = await db.from('bookings').insert({ barber_id:bState.barberId, service_id:bState.serviceId, client_name:name, client_phone:phone, date:getNextDates()[bState.date].full, time:bState.time, status:'confirmed', payment_method:'cash' });
   if (error) { toast('Error saving booking. Please try again.'); if(btn){btn.disabled=false;btn.textContent='Confirm booking';} return; }
   bState.step=3; renderBooking();
+}
+
+// ── CLIENT REVIEW FROM PROFILE PAGE ──
+function showReviewForm(barberId) {
+  reviewTargetBarberId = barberId;
+  reviewTargetBookingId = null;
+  selectedRating = 0;
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('review-comment').value = '';
+  // Show phone verification field for clients
+  const modal = document.getElementById('review-modal');
+  const existing = document.getElementById('review-phone-field');
+  if (!existing) {
+    const phoneField = document.createElement('div');
+    phoneField.id = 'review-phone-field';
+    phoneField.className = 'fg';
+    phoneField.style.marginBottom = '12px';
+    phoneField.innerHTML = '<label class="fl">Your phone number (to verify your booking)</label><input class="ff" id="review-phone" placeholder="+994 50 000 00 00" type="tel" maxlength="20">';
+    const starRating = document.getElementById('star-rating');
+    starRating.parentNode.insertBefore(phoneField, starRating);
+  }
+  openModal('review-modal');
+}
+
+async function submitReview() {
+  if (selectedRating===0) { document.getElementById('review-error').innerHTML='<div class="error-banner">Please select a star rating.</div>'; return; }
+  const comment=sanitize(document.getElementById('review-comment').value.trim(),500);
+  const phoneInput = document.getElementById('review-phone');
+  const phone = phoneInput ? sanitizePhone(phoneInput.value.trim()) : '';
+  if (!phone) { document.getElementById('review-error').innerHTML='<div class="error-banner">Please enter your phone number to verify your booking.</div>'; return; }
+  // Verify phone matches a real booking with this barber
+  const { data:bookings } = await db.from('bookings').select('id,client_name').eq('barber_id', reviewTargetBarberId).eq('client_phone', phone).eq('status','confirmed');
+  if (!bookings || bookings.length === 0) {
+    document.getElementById('review-error').innerHTML='<div class="error-banner">No confirmed booking found with this phone number for this barber. Only clients who have booked can leave reviews.</div>';
+    return;
+  }
+  // Check not already reviewed
+  const bookingId = bookings[0].id;
+  const { data:existing } = await db.from('reviews').select('id').eq('booking_id', bookingId);
+  if (existing && existing.length > 0) {
+    document.getElementById('review-error').innerHTML='<div class="error-banner">You have already left a review for this booking.</div>';
+    return;
+  }
+  const clientName = bookings[0].client_name;
+  const { error } = await db.from('reviews').insert({ barber_id:reviewTargetBarberId, booking_id:bookingId, client_name:clientName, rating:selectedRating, comment });
+  if (error) { toast('Error submitting review: '+error.message); return; }
+  // Update barber average rating
+  const { data:allRevs } = await db.from('reviews').select('rating').eq('barber_id', reviewTargetBarberId);
+  if (allRevs && allRevs.length > 0) {
+    const avg = allRevs.reduce((s,r)=>s+r.rating,0)/allRevs.length;
+    await db.from('barbers').update({rating:parseFloat(avg.toFixed(1)), review_count:allRevs.length}).eq('id', reviewTargetBarberId);
+  }
+  closeModal('review-modal');
+  toast('Review submitted. Thank you!');
+  loadProfileReviews(reviewTargetBarberId);
 }
 
 // ── CLIENT CANCELLATION ──
@@ -1246,14 +1386,7 @@ async function doCancelBooking() {
 }
 
 // ── REVIEWS ──
-function initReview(bookingId, barberId) {
-  reviewTargetBookingId=bookingId;
-  reviewTargetBarberId=barberId;
-  selectedRating=0;
-  document.querySelectorAll('.star-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('review-comment').value='';
-  openModal('review-modal');
-}
+// initReview replaced by showReviewForm for client use only
 
 function setRating(n) {
   selectedRating=n;
@@ -1471,6 +1604,10 @@ async function loadDashboard() {
   const { data:barber } = await db.from('barbers').select('*,salons(name)').eq('email',currentUser.email).maybeSingle();
   const targetBarber=barber||(await db.from('barbers').select('*').eq('status','active').limit(1)).data?.[0];
   if (!targetBarber) { document.getElementById('dash-barber-name').textContent='No profile found'; return; }
+  const greetHour = new Date().getHours();
+  const greetText = greetHour < 12 ? 'Good morning' : greetHour < 17 ? 'Good afternoon' : 'Good evening';
+  const greetEl = document.getElementById('t-dash-greet');
+  if (greetEl) greetEl.textContent = greetText;
   document.getElementById('dash-barber-name').textContent=sanitize(targetBarber.name);
   document.getElementById('dash-status-badge').textContent=targetBarber.status==='active'?'Active':'Pending — contact us to activate';
   document.getElementById('dash-status-badge').className='status-badge'+(targetBarber.status!=='active'?' inactive':'');
@@ -1487,8 +1624,7 @@ async function loadDashboard() {
     <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.time} · ${sanitize(b.services?.name||'—')} · ${sanitize(b.client_phone)}</div></div>
     <div class="appt-actions">
       <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Cancelled':b.services?.price+' AZN'||'Confirmed'}</span>
-      ${b.status!=='cancelled'?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Cancel</button>`:''}
-      <button class="cancel-btn" style="color:var(--gold);border-color:#fcd34d" onclick="initReview('${b.id}','${targetBarber.id}')">Review</button>
+      ${b.status!=='cancelled'?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Cancel</button>`:''}`
     </div>
   </div>`).join(''):'<div class="empty-state">No appointments today</div>';
   const bookedToday=(todayB||[]).map(b=>b.time);
@@ -1562,6 +1698,7 @@ let currentProfileBarber = null;
 
 async function openBarberProfile(barberId) {
   nav('profile');
+  applyDynamicTranslations();
   // Load barber data
   const { data:barber } = await db.from('barbers')
     .select('*, salons(name,city)')
@@ -1622,10 +1759,13 @@ async function loadProfileReviews(barberId) {
   const { data:reviews } = await db.from('reviews').select('*').eq('barber_id', barberId).order('created_at', {ascending:false}).limit(10);
   const el = document.getElementById('pp-reviews-list');
   if (!reviews || reviews.length === 0) {
-    el.innerHTML = '<div class="empty-state">No reviews yet — be the first to review!</div>';
+    el.innerHTML = `<div class="empty-state" style="margin-bottom:16px">No reviews yet — be the first!</div>
+    <button class="btn-main green" style="max-width:260px;margin:0 auto;display:block" onclick="showReviewForm('${barberId}')">Leave a review</button>`;
     return;
   }
-  el.innerHTML = reviews.map(r => `<div class="review-card">
+  // Add leave review button at top
+  el.innerHTML = `<button class="btn-main green" style="max-width:260px;margin-bottom:16px;display:block" onclick="showReviewForm('${barberId}')">Leave a review</button>`;
+  el.innerHTML += reviews.map(r => `<div class="review-card">
     <div class="review-card-header">
       <span class="review-card-author">${sanitize(r.client_name)}</span>
       <span class="review-card-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
