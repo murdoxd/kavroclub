@@ -778,7 +778,7 @@ let cancelTargetId = null;
 let reviewTargetBookingId = null;
 let reviewTargetBarberId = null;
 let selectedRating = 0;
-let bState = { barber:null, barberId:null, salonName:null, service:null, serviceId:null, servicePrice:null, serviceDur:null, time:null, date:0, step:0 };
+let bState = { barber:null, barberId:null, salonName:null, services:[], time:null, date:0, step:0 };
 let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'', email:'', password:'' };
 let regServices = [{ n:'Haircut', p:'10' }, { n:'Beard trim', p:'5' }];
 let activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1211,14 +1211,26 @@ async function renderBooking() {
   renderStepBar();
   const c=document.getElementById('booking-content');
   if (bState.step===0) {
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose a service</div><div class="loading">Loading...</div>`;
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose services</div><div class="loading">Loading...</div>`;
     const { data:services } = await db.from('services').select('*').eq('barber_id',bState.barberId).order('price');
     if (!services||services.length===0) { c.innerHTML='<div class="empty-state">No services listed yet.</div>'; return; }
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose a service</div>`+
-      services.map(sv=>`<div class="svc-opt ${bState.serviceId===sv.id?'sel':''}" onclick="pickService('${sv.id}','${sanitize(sv.name)}',${sv.price},${sv.duration_minutes||30})">
-        <div><div class="svc-nm">${sanitize(sv.name)}</div><div class="svc-dr">${sv.duration_minutes||30} min</div></div>
-        <div class="svc-pr">${sv.price} AZN</div>
-      </div>`).join('');
+    const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
+    const continueBtn = bState.services.length>0
+      ? `<button class="btn-main green" style="margin-top:16px" onclick="bState.step=1;renderBooking()">Continue — ${totalPrice} AZN →</button>`
+      : `<button class="btn-main" style="margin-top:16px;opacity:0.4;cursor:not-allowed" disabled>Select at least one service</button>`;
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose services (select one or more)</div>`+
+      services.map(sv=>{
+        const isSelected = bState.services.some(s=>s.id===sv.id);
+        return `<div class="svc-opt ${isSelected?'sel':''}" onclick="toggleService('${sv.id}','${sanitize(sv.name)}',${sv.price})">
+          <div><div class="svc-nm">${sanitize(sv.name)}</div></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="svc-pr">${sv.price} AZN</div>
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${isSelected?'var(--green)':'var(--gray-border)'};background:${isSelected?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${isSelected?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>':''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')+continueBtn;
   } else if (bState.step===1) {
     // Refresh DATES every time to always start from today
     const freshDates = getNextDates();
@@ -1267,9 +1279,9 @@ async function renderBooking() {
       <div class="confirm-card">
         <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
         <div class="cr"><span class="lbl">Salon</span><span class="val">${sanitize(bState.salonName||'Independent')}</span></div>
-        <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
+        <div class="cr"><span class="lbl">Services</span><span class="val">${bState.services.map(s=>s.name).join(', ')}</span></div>
         <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
-        <div class="cr"><span class="lbl">Price</span><span class="val" style="color:var(--green);font-weight:600">${bState.servicePrice} AZN</span></div>
+        <div class="cr"><span class="lbl">Total price</span><span class="val" style="color:var(--green);font-weight:600">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
         <div class="cr"><span class="lbl">Payment</span><span class="val">Cash or card at salon</span></div>
       </div>
       <div class="fg"><label class="fl">Full name</label><input class="ff" id="cn" placeholder="e.g. Ali Mammadov" maxlength="100"></div>
@@ -1285,9 +1297,9 @@ async function renderBooking() {
       <p class="success-sub">${sanitize(bState.barber)} has been notified. See you soon.</p>
       <div class="confirm-card" style="text-align:left;margin-bottom:18px">
         <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
-        <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
+        <div class="cr"><span class="lbl">Services</span><span class="val">${bState.services.map(s=>s.name).join(', ')}</span></div>
         <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
-        <div class="cr" style="border-bottom:none"><span class="lbl">Price</span><span class="val" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">Total</span><span class="val" style="color:var(--green)">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
       </div>
       <div class="notif-note">Booking saved. To rate your experience after your appointment, come back and visit the barber's profile.</div>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
@@ -1298,7 +1310,12 @@ async function renderBooking() {
   }
 }
 
-function pickService(id,name,price,dur){bState.serviceId=id;bState.service=name;bState.servicePrice=price;bState.serviceDur=dur;bState.step=1;renderBooking();}
+function toggleService(id,name,price){
+  const idx = bState.services.findIndex(s=>s.id===id);
+  if(idx>-1){ bState.services.splice(idx,1); }
+  else { bState.services.push({id,name,price}); }
+  renderBooking();
+}
 function pickTime(t){bState.time=t;bState.step=2;renderBooking();}
 
 async function confirmBooking() {
@@ -1311,7 +1328,19 @@ async function confirmBooking() {
   if (phone.length<6) { toast('Please enter a valid phone number'); return; }
   const btn=document.querySelector('#booking-content .btn-main.green');
   if (btn){btn.disabled=true;btn.textContent='Saving...';}
-  const { error } = await db.from('bookings').insert({ barber_id:bState.barberId, service_id:bState.serviceId, client_name:name, client_phone:phone, date:getNextDates()[bState.date].full, time:bState.time, status:'confirmed', payment_method:'cash' });
+  // Save one booking row per service selected
+  const bookingDate = getNextDates()[bState.date].full;
+  const bookingRows = bState.services.map(sv=>({
+    barber_id:bState.barberId,
+    service_id:sv.id,
+    client_name:name,
+    client_phone:phone,
+    date:bookingDate,
+    time:bState.time,
+    status:'confirmed',
+    payment_method:'cash'
+  }));
+  const { error } = await db.from('bookings').insert(bookingRows);
   if (error) { toast('Error saving booking. Please try again.'); if(btn){btn.disabled=false;btn.textContent='Confirm booking';} return; }
   bState.step=3; renderBooking();
 }
