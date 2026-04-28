@@ -1624,7 +1624,7 @@ async function loadDashboard() {
     <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.time} · ${sanitize(b.services?.name||'—')} · ${sanitize(b.client_phone)}</div></div>
     <div class="appt-actions">
       <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Cancelled':b.services?.price+' AZN'||'Confirmed'}</span>
-      ${b.status!=='cancelled'?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Cancel</button>`:''}`
+      ${b.status!=='cancelled'?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Cancel</button>`:''}
     </div>
   </div>`).join(''):'<div class="empty-state">No appointments today</div>';
   const bookedToday=(todayB||[]).map(b=>b.time);
