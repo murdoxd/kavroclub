@@ -1,87 +1,123 @@
 <!DOCTYPE html>
 <!--
 ================================================================
-KAVRO.CLUB — COMPLETE PROJECT FILE v2.0.0
+KAVRO.CLUB — COMPLETE PROJECT FILE v3.0.0
 ================================================================
-SECURITY AUDIT REPORT:
-  [OK] Supabase anon key is public by design — safe in frontend
-  [OK] Rate limiting implemented on login (5 attempts / 15 min)
-  [OK] All user inputs sanitized and length-limited
-  [OK] XSS protection on all rendered user content
-  [OK] Admin access via secret hash — not exposed in nav
-  [OK] No service_role/secret keys in frontend code
-  [PENDING] Enable RLS in Supabase for production security
-  [PENDING] Move to React + env vars for enterprise security
-  [INFO] Anon key is intentionally public per Supabase design
+CHANGES FROM v2.0.0:
+  [FIX] Page refresh state persistence via sessionStorage
+  [FIX] Duplicate submitReview() function removed
+  [FIX] Midnight booking bug fixed (local date used everywhere)
+  [FIX] Dashboard labels bookings as Passed / Upcoming
+  [FIX] Rank badges removed from barber cards
+  [FIX] Language order changed to AZ RU EN
+  [FIX] "For Barbers" nav hidden when barber is logged in
+  [FIX] "Top Rated Barbers" feature card removed
+  [NEW] Telegram notifications for new bookings & cancellations
+  [NEW] Favorites via localStorage (star icon, no login needed)
+  [NEW] Client self-cancellation from booking lookup
+  [NEW] Privacy Policy page
+  [NEW] Terms of Use page
+  [NEW] PWA manifest + service worker registration
+  [NEW] Full security checklist in comments
+  [NEW] Booking status labels (Passed / Upcoming / Cancelled)
+  [NEW] Multi-service summary on confirm step
+  [NEW] "For Barbers" removed from nav when logged in as barber
 
-WHATSAPP: +994 50 342 48 80 / +994 51 300 42 19
-SUBSCRIPTION: 25 AZN / month
+TELEGRAM:
+  Bot Token: 8645466274:AAF_9hBTJwOdMyMIO1OFf8vQPEbct_0WcB0
+  Chat ID:   7568815452
 
-SQL SCHEMA (run in Supabase SQL Editor):
+PRE-LAUNCH SECURITY CHECKLIST:
+  [ ] Enable RLS on all tables in Supabase (SQL below)
+  [ ] Rotate anon key if exposed in public repo
+  [ ] Set up email confirmation in Supabase Auth settings
+  [ ] Add rate limiting on Supabase edge functions if needed
+  [ ] Review storage bucket policies (photos bucket)
+  [ ] Add HTTPS / custom domain
+  [ ] Test all RLS policies with anon role
+  [ ] Add Supabase backup schedule
+  [ ] Remove admin hash from code before open-source
+
+RLS SQL (run in Supabase SQL Editor):
 ================================================================
-  create table if not exists salons (
-    id uuid default gen_random_uuid() primary key,
-    name text not null, city text not null, phone text,
-    about text, status text default 'pending',
-    from_price numeric default 0, rating numeric default 0,
-    created_at timestamp default now()
-  );
-  create table if not exists barbers (
-    id uuid default gen_random_uuid() primary key,
-    salon_id uuid references salons(id) on delete cascade,
-    name text not null, email text, specialty text,
-    work_days text[], start_time text default '10:00',
-    end_time text default '22:00', buffer_minutes int default 10,
-    status text default 'pending', location text, photo_url text,
-    rating numeric default 0, review_count int default 0,
-    paid_until date, created_at timestamp default now()
-  );
-  create table if not exists services (
+  alter table salons enable row level security;
+  alter table barbers enable row level security;
+  alter table services enable row level security;
+  alter table bookings enable row level security;
+  alter table reviews enable row level security;
+  alter table portfolio enable row level security;
+
+  -- Public read for active barbers/salons/services/reviews/portfolio
+  create policy "Public read salons" on salons for select using (status = 'active');
+  create policy "Public read barbers" on barbers for select using (status = 'active');
+  create policy "Public read services" on services for select using (true);
+  create policy "Public read reviews" on reviews for select using (true);
+  create policy "Public read portfolio" on portfolio for select using (true);
+
+  -- Public insert for bookings and reviews (clients book without accounts)
+  create policy "Public insert bookings" on bookings for insert with check (true);
+  create policy "Public insert reviews" on reviews for insert with check (true);
+  create policy "Public read bookings" on bookings for select using (true);
+
+  -- Barbers can update/cancel their own bookings
+  create policy "Barbers update bookings" on bookings for update using (true);
+
+  -- Authenticated barbers can manage their own data
+  create policy "Barbers manage own profile" on barbers for update
+    using (auth.jwt() ->> 'email' = email);
+  create policy "Barbers manage own portfolio" on portfolio for all
+    using (barber_id in (select id from barbers where email = auth.jwt() ->> 'email'));
+  create policy "Barbers manage own services" on services for all
+    using (barber_id in (select id from barbers where email = auth.jwt() ->> 'email'));
+
+  -- Admin: service role bypasses RLS (use only server-side)
+
+DATABASE ADDITIONS NEEDED (run these too):
+================================================================
+  -- Add cancelled_at and notes to bookings
+  alter table bookings add column if not exists cancelled_at timestamp;
+  alter table bookings add column if not exists notes text;
+  alter table bookings add column if not exists total_price numeric default 0;
+
+  -- Notifications table
+  create table if not exists notifications (
     id uuid default gen_random_uuid() primary key,
     barber_id uuid references barbers(id) on delete cascade,
-    name text not null, price numeric not null,
-    duration_minutes int default 30
-  );
-  create table if not exists bookings (
-    id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id),
-    service_id uuid references services(id),
-    client_name text not null, client_phone text not null,
-    date date not null, time text not null,
-    status text default 'confirmed',
-    payment_method text default 'cash',
+    type text not null, -- 'new_booking' | 'cancellation'
+    message text not null,
+    read boolean default false,
     created_at timestamp default now()
   );
-  create table if not exists reviews (
-    id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id),
-    booking_id uuid references bookings(id),
-    client_name text not null,
-    rating int not null check (rating >= 1 and rating <= 5),
-    comment text, created_at timestamp default now()
-  );
-  alter table barbers add column if not exists email text;
-  alter table barbers add column if not exists location text;
-  alter table barbers add column if not exists photo_url text;
-  alter table barbers add column if not exists review_count int default 0;
 
-  -- Portfolio table (run this too):
-  create table if not exists portfolio (
+  -- Clients table (for future client accounts)
+  create table if not exists clients (
     id uuid default gen_random_uuid() primary key,
-    barber_id uuid references barbers(id) on delete cascade,
-    photo_url text not null,
-    caption text,
+    name text not null,
+    phone text not null unique,
+    email text,
     created_at timestamp default now()
+  );
+
+  -- Favorites table (for logged-in future use, cookies handle anonymous)
+  create table if not exists favorites (
+    id uuid default gen_random_uuid() primary key,
+    client_phone text not null,
+    barber_id uuid references barbers(id) on delete cascade,
+    created_at timestamp default now(),
+    unique(client_phone, barber_id)
   );
 ================================================================
 -->
-<html lang="en">
+<html lang="az">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kavro — Book Your Barber in Baku</title>
-<meta name="description" content="Find and book the best barbers in Baku, Azerbaijan. Real-time slots, instant confirmation.">
+<title>Kavro — Bakıda Bərbər Tap və Sifariş Et</title>
+<meta name="description" content="Bakıda ən yaxşı bərbərləri tap və sifariş et. Real vaxt slotları, ani təsdiq.">
+<meta name="theme-color" content="#1a9e6e">
+<link rel="manifest" href="#" id="pwa-manifest-link">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
@@ -156,12 +192,13 @@ button,input,textarea,select{font-family:'DM Sans',sans-serif}
 .filter-btn{padding:9px 15px;border-radius:10px;border:1px solid var(--gray-border);background:white;font-size:13px;cursor:pointer;color:var(--gray);transition:all .15s;white-space:nowrap}
 .filter-btn.on{background:var(--black);color:white;border-color:var(--black)}
 .barbers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
-.barber-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .2s;box-shadow:var(--shadow)}
+.barber-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .2s;box-shadow:var(--shadow);position:relative}
 .barber-card:hover{border-color:var(--green);transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .bc-photo{height:130px;background:linear-gradient(135deg,#1a2a1a,#0d3d28);display:flex;align-items:center;justify-content:center;position:relative;font-family:'DM Serif Display',serif;font-size:52px;color:rgba(255,255,255,0.25);overflow:hidden}
 .bc-photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
-.rank-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);color:var(--gold);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid rgba(245,158,11,0.3)}
-.rank-1{background:rgba(245,158,11,0.2);border-color:var(--gold)}
+.fav-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s}
+.fav-btn:hover{background:rgba(0,0,0,0.7)}
+.fav-btn.active{color:#f59e0b}
 .bc-body{padding:14px}
 .bc-name{font-size:17px;font-weight:600;margin-bottom:3px}
 .bc-salon{font-size:13px;color:var(--green);margin-bottom:3px;display:flex;align-items:center;gap:4px}
@@ -173,6 +210,8 @@ button,input,textarea,select{font-family:'DM Sans',sans-serif}
 .bc-price{font-size:14px;font-weight:600;color:var(--green)}
 .map-btn{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--green);cursor:pointer;background:none;border:none;padding:0;text-decoration:none}
 .map-btn svg{width:11px;height:11px;stroke:var(--green);fill:none;stroke-width:2}
+.fav-section{margin-bottom:28px}
+.fav-section h3{font-size:16px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .booking-layout{max-width:660px;margin:0 auto;padding:40px 24px}
 .back-link{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--gray);cursor:pointer;margin-bottom:28px;width:fit-content;border:none;background:none;padding:0}
 .back-link:hover{color:var(--black)}
@@ -285,14 +324,16 @@ textarea.ff{resize:vertical;min-height:80px}
 @media(max-width:640px){.dash-grid{grid-template-columns:1fr}}
 .dash-card{background:white;border:1px solid var(--gray-border);border-radius:var(--radius);padding:18px}
 .dash-card h3{font-size:14px;font-weight:600;margin-bottom:14px}
-.appt-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-border)}
+.appt-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-border);gap:8px;flex-wrap:wrap}
 .appt-row:last-child{border-bottom:none}
 .appt-client{font-size:13px;font-weight:500}
 .appt-time{font-size:11px;color:var(--gray);margin-top:1px}
-.appt-actions{display:flex;gap:6px;align-items:center}
-.ab{font-size:11px;padding:3px 8px;border-radius:20px}
+.appt-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ab{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500}
 .ab.confirmed{background:var(--green-light);color:var(--green-dark)}
 .ab.cancelled{background:var(--red-light);color:var(--red)}
+.ab.passed{background:var(--gray-light);color:var(--gray)}
+.ab.upcoming{background:#eff6ff;color:#1d4ed8}
 .slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:14px}
 .slot-mini{padding:7px 3px;text-align:center;border-radius:7px;font-size:11px;border:1px solid var(--gray-border)}
 .slot-mini.free{border-color:var(--green);color:var(--green);background:var(--green-light)}
@@ -351,8 +392,6 @@ textarea.ff{resize:vertical;min-height:80px}
 .profile-stat{text-align:center}
 .profile-stat .val{font-family:'DM Serif Display',serif;font-size:24px;display:block}
 .profile-stat .lbl{font-size:12px;color:var(--gray)}
-.profile-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.profile-tag{background:var(--green-light);color:var(--green-dark);font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500}
 .profile-about{font-size:14px;color:var(--gray);line-height:1.7;margin-bottom:20px}
 .profile-meta{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
 .profile-meta-row{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--gray)}
@@ -397,6 +436,26 @@ textarea.ff{resize:vertical;min-height:80px}
 .error-banner{background:var(--red-light);border:1px solid #fca5a5;border-radius:9px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px}
 .cancel-btn{background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;color:var(--red);cursor:pointer;transition:all .15s}
 .cancel-btn:hover{background:var(--red-light)}
+/* Client cancel booking page */
+.lookup-layout{max-width:500px;margin:0 auto;padding:60px 24px}
+/* Legal pages */
+.legal-layout{max-width:760px;margin:0 auto;padding:40px 24px}
+.legal-layout h1{font-family:'DM Serif Display',serif;font-size:32px;margin-bottom:8px;letter-spacing:-0.5px}
+.legal-layout h2{font-family:'DM Serif Display',serif;font-size:20px;margin:28px 0 10px;letter-spacing:-0.3px}
+.legal-layout p,.legal-layout li{font-size:14px;color:var(--gray);line-height:1.8;margin-bottom:8px}
+.legal-layout ul{padding-left:20px;margin-bottom:12px}
+.legal-layout .last-updated{font-size:12px;color:#bbb;margin-bottom:32px}
+.footer-links{display:flex;gap:16px;justify-content:center;padding:24px;border-top:1px solid var(--gray-border);margin-top:40px;flex-wrap:wrap}
+.footer-link{font-size:12px;color:var(--gray);cursor:pointer;text-decoration:none;border:none;background:none}
+.footer-link:hover{color:var(--green)}
+/* PWA install banner */
+.pwa-banner{position:fixed;bottom:0;left:0;right:0;background:var(--black);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:998;transform:translateY(100%);transition:transform .3s}
+.pwa-banner.show{transform:translateY(0)}
+.pwa-banner p{font-size:13px;line-height:1.5}
+.pwa-banner strong{display:block;font-size:14px;margin-bottom:2px}
+.pwa-banner-btns{display:flex;gap:8px;flex-shrink:0}
+.pwa-install-btn{background:var(--green);color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer}
+.pwa-dismiss-btn{background:transparent;color:rgba(255,255,255,0.6);border:none;font-size:20px;cursor:pointer;padding:4px}
 @media(max-width:640px){
   .topbar{padding:0 16px}.topbar-nav{display:none}
   .mobile-menu-btn{display:flex}
@@ -404,21 +463,34 @@ textarea.ff{resize:vertical;min-height:80px}
   .barbers-grid{grid-template-columns:1fr}.stats-bar{gap:28px}
   .dash-grid{grid-template-columns:1fr}.admin-tabs{width:100%}
   .f2col{grid-template-columns:1fr}.features-grid{grid-template-columns:1fr}
+  .profile-hero{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
 
+<!-- PWA Install Banner -->
+<div class="pwa-banner" id="pwa-banner">
+  <div>
+    <strong>📱 Tətbiq kimi yüklə</strong>
+    <p>Kavro-nu ana ekrana əlavə et — tez giriş üçün</p>
+  </div>
+  <div class="pwa-banner-btns">
+    <button class="pwa-install-btn" onclick="installPWA()">Yüklə</button>
+    <button class="pwa-dismiss-btn" onclick="dismissPWA()">×</button>
+  </div>
+</div>
+
 <!-- URGENT MODAL -->
 <div class="modal-backdrop" id="urgent-modal">
   <div class="modal-box">
-    <h3 id="t-urgent-title">I need a cut right now</h3>
-    <p id="t-urgent-desc">We'll find the barber with the earliest available slot today.</p>
+    <h3 id="t-urgent-title">İndi bərbərə ehtiyacım var</h3>
+    <p id="t-urgent-desc">Bu gün ən erkən boş slotu tapacağıq.</p>
     <div id="urgent-result"></div>
-    <div class="modal-btns" style="margin-top:18px">
-      <button class="btn-sec" onclick="closeModal('urgent-modal')" id="t-cancel">Cancel</button>
-      <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="findUrgent()" id="t-find-btn">Find me a barber</button>
+    <div class="modal-btns" style="margin-top:18px" id="urgent-modal-btns">
+      <button class="btn-sec" onclick="closeModal('urgent-modal')" id="t-cancel">Ləğv et</button>
+      <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="findUrgent()" id="t-find-btn">Bərbər tap</button>
     </div>
   </div>
 </div>
@@ -427,11 +499,11 @@ textarea.ff{resize:vertical;min-height:80px}
 <div class="modal-backdrop" id="delete-modal">
   <div class="modal-box">
     <div class="modal-icon danger"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
-    <h3 id="del-title">Delete barber?</h3>
-    <p>Their profile will be hidden immediately. You can restore them later.</p>
+    <h3 id="del-title">Bərbəri sil?</h3>
+    <p>Profil dərhal gizlənəcək. Sonradan bərpa edə bilərsiniz.</p>
     <div class="modal-btns">
-      <button class="btn-sec" onclick="closeModal('delete-modal')">Cancel</button>
-      <button class="btn-delete" style="border-radius:10px;padding:10px 18px;font-size:14px" onclick="doDelete()">Yes, delete</button>
+      <button class="btn-sec" onclick="closeModal('delete-modal')">Ləğv et</button>
+      <button class="btn-delete" style="border-radius:10px;padding:10px 18px;font-size:14px" onclick="doDelete()">Bəli, sil</button>
     </div>
   </div>
 </div>
@@ -439,8 +511,12 @@ textarea.ff{resize:vertical;min-height:80px}
 <!-- REVIEW MODAL -->
 <div class="modal-backdrop" id="review-modal">
   <div class="modal-box">
-    <h3 id="t-review-title">Rate your experience</h3>
-    <p id="t-review-desc">How was your appointment? Your review helps other clients.</p>
+    <h3 id="t-review-title">Təcrübənizi qiymətləndirin</h3>
+    <p id="t-review-desc">Görüşünüz necə keçdi? Rəyiniz digər müştərilərə kömək edir.</p>
+    <div class="fg" id="review-phone-field">
+      <label class="fl">Telefon nömrəniz (sifarişi doğrulamaq üçün)</label>
+      <input class="ff" id="review-phone" placeholder="+994 50 000 00 00" type="tel" maxlength="20">
+    </div>
     <div class="star-rating" id="star-rating">
       <button class="star-btn" onclick="setRating(1)" data-star="1">★</button>
       <button class="star-btn" onclick="setRating(2)" data-star="2">★</button>
@@ -449,13 +525,13 @@ textarea.ff{resize:vertical;min-height:80px}
       <button class="star-btn" onclick="setRating(5)" data-star="5">★</button>
     </div>
     <div class="fg" style="margin-bottom:0">
-      <label class="fl" id="t-review-label">Comment (optional)</label>
-      <textarea class="ff" id="review-comment" rows="3" placeholder="Tell others about your experience..." maxlength="500"></textarea>
+      <label class="fl" id="t-review-label">Şərh (isteğe bağlı)</label>
+      <textarea class="ff" id="review-comment" rows="3" placeholder="Digərlərinə təcrübəniz haqqında danışın..." maxlength="500"></textarea>
     </div>
     <div id="review-error"></div>
     <div class="modal-btns" style="margin-top:16px">
-      <button class="btn-sec" onclick="closeModal('review-modal')">Cancel</button>
-      <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="submitReview()">Submit review</button>
+      <button class="btn-sec" onclick="closeModal('review-modal')">Ləğv et</button>
+      <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="submitReview()">Rəy göndər</button>
     </div>
   </div>
 </div>
@@ -464,11 +540,11 @@ textarea.ff{resize:vertical;min-height:80px}
 <div class="modal-backdrop" id="cancel-modal">
   <div class="modal-box">
     <div class="modal-icon danger"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-    <h3 id="t-cancel-title">Cancel booking?</h3>
-    <p id="t-cancel-desc">This will free up the time slot for other clients.</p>
+    <h3 id="t-cancel-title">Sifarişi ləğv et?</h3>
+    <p id="t-cancel-desc">Bu zaman slotu digər müştərilər üçün azad ediləcək.</p>
     <div class="modal-btns">
-      <button class="btn-sec" onclick="closeModal('cancel-modal')">Keep booking</button>
-      <button class="btn-danger" onclick="doCancelBooking()">Yes, cancel it</button>
+      <button class="btn-sec" onclick="closeModal('cancel-modal')">Sifarişi saxla</button>
+      <button class="btn-danger" onclick="doCancelBooking()">Bəli, ləğv et</button>
     </div>
   </div>
 </div>
@@ -477,21 +553,21 @@ textarea.ff{resize:vertical;min-height:80px}
 <nav class="topbar">
   <div class="logo" onclick="nav('home')">kavro<span>.club</span></div>
   <div class="topbar-nav">
-    <button class="nav-btn active" id="nb-home" onclick="nav('home')">Home</button>
-    <button class="nav-btn" id="nb-barbers" onclick="nav('barbers')">Barbers</button>
-    <button class="nav-btn" id="nb-register" onclick="nav('register')">For barbers</button>
-    <button class="nav-btn" id="nb-login" onclick="nav('login')">Login</button>
-    <button class="nav-btn" id="nb-dashboard" style="display:none" onclick="nav('dashboard')">Dashboard</button>
+    <button class="nav-btn active" id="nb-home" onclick="nav('home')">Ana səhifə</button>
+    <button class="nav-btn" id="nb-barbers" onclick="nav('barbers')">Bərbərlər</button>
+    <button class="nav-btn" id="nb-register" onclick="nav('register')">Bərbərlər üçün</button>
+    <button class="nav-btn" id="nb-login" onclick="nav('login')">Giriş</button>
+    <button class="nav-btn" id="nb-dashboard" style="display:none" onclick="nav('dashboard')">Kabinetim</button>
   </div>
   <div class="topbar-right">
     <div class="lang-switcher">
-      <button class="lang-btn active" onclick="setLang('en',this)">EN</button>
-      <button class="lang-btn" onclick="setLang('az',this)">AZ</button>
+      <button class="lang-btn active" onclick="setLang('az',this)">AZ</button>
       <button class="lang-btn" onclick="setLang('ru',this)">RU</button>
+      <button class="lang-btn" onclick="setLang('en',this)">EN</button>
     </div>
     <button id="user-pill-btn" style="display:none" class="user-pill" onclick="nav('dashboard')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      <span id="user-pill-name">Barber</span>
+      <span id="user-pill-name">Bərbər</span>
     </button>
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
       <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -499,63 +575,74 @@ textarea.ff{resize:vertical;min-height:80px}
   </div>
 </nav>
 <div class="mobile-nav" id="mobile-nav">
-  <button class="mobile-nav-btn" onclick="nav('home');closeMobileNav()">Home</button>
-  <button class="mobile-nav-btn" onclick="nav('barbers');closeMobileNav()">Barbers</button>
-  <button class="mobile-nav-btn" onclick="nav('register');closeMobileNav()">For barbers</button>
-  <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Login</button>
-  <button class="mobile-nav-btn" id="mob-dash-btn" style="display:none" onclick="nav('dashboard');closeMobileNav()">Dashboard</button>
-  <button class="mobile-nav-btn" id="mob-logout-btn" style="display:none;color:var(--red)" onclick="logout();closeMobileNav()">Logout</button>
+  <button class="mobile-nav-btn" onclick="nav('home');closeMobileNav()">Ana səhifə</button>
+  <button class="mobile-nav-btn" onclick="nav('barbers');closeMobileNav()">Bərbərlər</button>
+  <button class="mobile-nav-btn" id="mob-register-btn" onclick="nav('register');closeMobileNav()">Bərbərlər üçün</button>
+  <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Giriş</button>
+  <button class="mobile-nav-btn" id="mob-dash-btn" style="display:none" onclick="nav('dashboard');closeMobileNav()">Kabinetim</button>
+  <button class="mobile-nav-btn" id="mob-lookup-btn" onclick="nav('lookup');closeMobileNav()">Sifarişimi tap</button>
+  <button class="mobile-nav-btn" id="mob-logout-btn" style="display:none;color:var(--red)" onclick="logout();closeMobileNav()">Çıxış</button>
 </div>
 
 <!-- HOME -->
 <div class="page active" id="page-home">
   <div class="hero">
-    <div class="hero-tag" id="t-hero-tag">Now in Baku, Azerbaijan</div>
-    <h1 id="t-hero-h1">Book your next cut<br>in <em>seconds</em></h1>
-    <p id="t-hero-p">Find verified barbers near you, pick a time that works, and show up.</p>
+    <div class="hero-tag" id="t-hero-tag">İndi Bakıda, Azərbaycanda</div>
+    <h1 id="t-hero-h1">Növbəti saç kəsiminə<br><em>saniyələrdə</em> yazıl</h1>
+    <p id="t-hero-p">Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.</p>
     <div class="hero-btns">
-      <button class="btn-hero-main" onclick="nav('barbers')" id="t-browse-btn">Browse barbers</button>
-      <button class="btn-hero-sec" onclick="nav('register')" id="t-barber-btn">I'm a barber</button>
+      <button class="btn-hero-main" onclick="nav('barbers')" id="t-browse-btn">Bərbərlərə bax</button>
+      <button class="btn-hero-sec" onclick="nav('register')" id="t-barber-btn">Mən bərbərəm</button>
     </div>
     <div class="urgent-wrap">
       <button class="urgent-btn" onclick="openModal('urgent-modal')">
         <span class="urgent-dot"></span>
-        <span id="t-urgent-text">I need a cut right now</span>
+        <span id="t-urgent-text">İndi dərhal bərbər lazımdır</span>
       </button>
     </div>
   </div>
   <div class="stats-bar">
-    <div class="stat-item"><div class="stat-num" id="stat-barbers">—</div><div class="stat-lbl" id="t-stat1">Active barbers</div></div>
-    <div class="stat-item"><div class="stat-num" id="stat-bookings">—</div><div class="stat-lbl" id="t-stat2">Bookings made</div></div>
-    <div class="stat-item"><div class="stat-num">4.8★</div><div class="stat-lbl" id="t-stat3">Average rating</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-barbers">—</div><div class="stat-lbl" id="t-stat1">Aktiv bərbərlər</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-bookings">—</div><div class="stat-lbl" id="t-stat2">Sifarişlər</div></div>
+    <div class="stat-item"><div class="stat-num">4.8★</div><div class="stat-lbl" id="t-stat3">Orta reytinq</div></div>
   </div>
   <div class="features-section">
-    <h2 id="t-feat-h">Everything you need, nothing you don't</h2>
-    <p class="f-sub" id="t-feat-sub">Built for barbers in Azerbaijan, designed for everyone.</p>
+    <h2 id="t-feat-h">Lazım olan hər şey, lazımsız heç nə</h2>
+    <p class="f-sub" id="t-feat-sub">Azərbaycan bərbərləri üçün qurulub, hamı üçün dizayn edilib.</p>
     <div class="features-grid">
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div><h3 id="t-f1h">Find a barber</h3><p id="t-f1p">Browse verified barbers ranked by rating.</p></div>
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><h3 id="t-f2h">Real-time slots</h3><p id="t-f2p">If the slot is green, it's yours.</p></div>
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div><h3 id="t-f3h">Book in 60 seconds</h3><p id="t-f3p">Clients only need a name and phone number.</p></div>
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h3 id="t-f5h">Find on the map</h3><p id="t-f5p">Open in Google or Apple Maps instantly.</p></div>
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><h3 id="t-f6h">Ranked barbers</h3><p id="t-f6p">Top rated appear first. Real reviews only.</p></div>
-      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3 id="t-f7h">Secure platform</h3><p id="t-f7p">Rate limiting, input validation, secure login.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div><h3 id="t-f1h">Bərbər tap</h3><p id="t-f1p">Reytinqə görə sıralanan bərbərləri gör.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><h3 id="t-f2h">Real vaxt slotları</h3><p id="t-f2p">Əgər slot yaşıldırsa, sizindir.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div><h3 id="t-f3h">60 saniyədə sifariş et</h3><p id="t-f3p">Müştərilərə yalnız ad və telefon lazımdır.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h3 id="t-f5h">Xəritədə tap</h3><p id="t-f5p">Google və ya Apple Maps-da açın.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h3 id="t-f6h">Sevimlilərin</h3><p id="t-f6p">Bərbərləri ulduz ilə əlavə et, hesab olmadan saxla.</p></div>
+      <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3 id="t-f7h">Təhlükəsiz platforma</h3><p id="t-f7p">Giriş məhdudiyyəti, giriş qorunması.</p></div>
     </div>
+  </div>
+  <div class="footer-links">
+    <button class="footer-link" onclick="nav('privacy')">Məxfilik Siyasəti</button>
+    <button class="footer-link" onclick="nav('terms')">İstifadə Şərtləri</button>
+    <button class="footer-link" onclick="nav('lookup')">Sifarişimi tap</button>
   </div>
 </div>
 
 <!-- BARBERS -->
 <div class="page" id="page-barbers">
   <div class="page-content">
-    <div class="page-header"><h2 id="t-barbers-h">Barbers in Baku</h2><p id="t-barbers-p">Ranked by rating — highest first</p></div>
+    <div class="page-header"><h2 id="t-barbers-h">Bakıdakı bərbərlər</h2><p id="t-barbers-p">Reytinqə görə sıralanır</p></div>
     <div class="filters-row">
       <div class="search-wrap">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="barber-search" placeholder="Search barbers, salons..." oninput="filterBarbers()" maxlength="100">
+        <input type="text" id="barber-search" placeholder="Bərbər, salon axtar..." oninput="filterBarbers()" maxlength="100">
       </div>
-      <button class="filter-btn on" id="fb-all" onclick="setFilter('all',this)" id="t-fall">All</button>
-      <button class="filter-btn" id="fb-top" onclick="setFilter('top',this)" id="t-ftop">Top rated</button>
+      <button class="filter-btn on" id="fb-all" onclick="setFilter('all',this)">Hamısı</button>
+      <button class="filter-btn" id="fb-favs" onclick="setFilter('favs',this)">★ Sevimlilər</button>
     </div>
-    <div class="barbers-grid" id="barbers-grid"><div class="loading">Loading barbers...</div></div>
+    <div id="favs-section" style="display:none" class="fav-section">
+      <h3>★ Sevimlilər</h3>
+      <div class="barbers-grid" id="favs-grid"></div>
+      <div class="divider"></div>
+    </div>
+    <div class="barbers-grid" id="barbers-grid"><div class="loading">Bərbərlər yüklənir...</div></div>
   </div>
 </div>
 
@@ -564,7 +651,7 @@ textarea.ff{resize:vertical;min-height:80px}
   <div class="booking-layout">
     <button class="back-link" onclick="nav('barbers')">
       <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
-      <span id="t-back">Back to barbers</span>
+      <span id="t-back">Bərbərlərə qayıt</span>
     </button>
     <div class="step-progress" id="step-bar"></div>
     <div id="booking-content"></div>
@@ -576,34 +663,37 @@ textarea.ff{resize:vertical;min-height:80px}
   <div class="barber-profile-layout">
     <button class="back-link" onclick="nav('barbers')" style="margin-bottom:24px">
       <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
-      <span>Back to barbers</span>
+      <span>Bərbərlərə qayıt</span>
     </button>
     <div class="profile-hero">
       <div class="profile-photo" id="pp-photo">A</div>
       <div class="profile-info">
-        <h1 id="pp-name">Barber Name</h1>
+        <h1 id="pp-name">Bərbər adı</h1>
         <div class="profile-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg><span id="pp-salon">Salon</span></div>
-        <div class="profile-specialty" id="pp-specialty">Specialty</div>
+        <div class="profile-specialty" id="pp-specialty">İxtisas</div>
         <div class="profile-stats">
-          <div class="profile-stat"><span class="val" id="pp-rating">—</span><span class="lbl">Rating</span></div>
-          <div class="profile-stat"><span class="val" id="pp-reviews">0</span><span class="lbl">Reviews</span></div>
-          <div class="profile-stat"><span class="val" id="pp-bookings">0</span><span class="lbl">Bookings</span></div>
+          <div class="profile-stat"><span class="val" id="pp-rating">—</span><span class="lbl">Reytinq</span></div>
+          <div class="profile-stat"><span class="val" id="pp-reviews">0</span><span class="lbl">Rəylər</span></div>
+          <div class="profile-stat"><span class="val" id="pp-bookings">0</span><span class="lbl">Sifarişlər</span></div>
         </div>
         <div class="profile-meta">
           <div class="profile-meta-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="pp-hours">—</span></div>
-          <div class="profile-meta-row" id="pp-location-row" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><a id="pp-map-link" href="#" target="_blank" rel="noopener" style="color:var(--green)">View on map</a></div>
+          <div class="profile-meta-row" id="pp-location-row" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><a id="pp-map-link" href="#" target="_blank" rel="noopener" style="color:var(--green)">Xəritədə gör</a></div>
         </div>
         <div class="profile-about" id="pp-about" style="display:none"></div>
-        <button class="book-now-btn" onclick="bookFromProfile()">Book appointment</button>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="book-now-btn" onclick="bookFromProfile()" style="flex:1">Sifariş et</button>
+          <button id="pp-fav-btn" onclick="toggleFavFromProfile()" style="background:var(--gray-light);border:none;border-radius:12px;padding:14px 18px;font-size:20px;cursor:pointer">☆</button>
+        </div>
       </div>
     </div>
     <div class="portfolio-section">
       <h2>Portfolio</h2>
-      <div class="portfolio-grid" id="pp-portfolio"><div class="portfolio-empty">No portfolio photos yet</div></div>
+      <div class="portfolio-grid" id="pp-portfolio"><div class="portfolio-empty">Hələ portfolio şəkli yoxdur</div></div>
     </div>
     <div class="reviews-section">
-      <h2>Reviews</h2>
-      <div id="pp-reviews-list"><div class="empty-state">No reviews yet</div></div>
+      <h2>Rəylər</h2>
+      <div id="pp-reviews-list"><div class="empty-state">Hələ rəy yoxdur</div></div>
     </div>
   </div>
 </div>
@@ -617,16 +707,16 @@ textarea.ff{resize:vertical;min-height:80px}
 <!-- REGISTER -->
 <div class="page" id="page-register">
   <div class="reg-layout">
-    <div class="page-header"><h2 id="t-reg-h">Join as a barber</h2><p id="t-reg-p">Set up your profile and start receiving bookings</p></div>
+    <div class="page-header"><h2 id="t-reg-h">Bərbər kimi qoşul</h2><p id="t-reg-p">Profilinizi yaradın və sifarişlər almağa başlayın</p></div>
     <div class="warn-banner">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <p id="t-reg-warn">Your profile will only go live after we confirm your first monthly payment.</p>
+      <p id="t-reg-warn">Profiliniz ödəniş təsdiqləndikdən sonra aktiv olacaq.</p>
     </div>
     <div class="reg-steps">
-      <button class="rsb active" id="rs-profile" onclick="regTab('profile')" id="t-tab1">Profile</button>
-      <button class="rsb" id="rs-schedule" onclick="regTab('schedule')" id="t-tab2">Schedule</button>
-      <button class="rsb" id="rs-services" onclick="regTab('services')" id="t-tab3">Services</button>
-      <button class="rsb" id="rs-payment" onclick="regTab('payment')" id="t-tab4">Payment</button>
+      <button class="rsb active" id="rs-profile" onclick="regTab('profile')">Profil</button>
+      <button class="rsb" id="rs-schedule" onclick="regTab('schedule')">Cədvəl</button>
+      <button class="rsb" id="rs-services" onclick="regTab('services')">Xidmətlər</button>
+      <button class="rsb" id="rs-payment" onclick="regTab('payment')">Ödəniş</button>
     </div>
     <div id="reg-content"></div>
   </div>
@@ -635,11 +725,11 @@ textarea.ff{resize:vertical;min-height:80px}
 <!-- LOGIN -->
 <div class="page" id="page-login">
   <div class="login-layout">
-    <h2 class="login-title" id="t-login-h">Barber login</h2>
-    <p class="login-sub" id="t-login-p">Access your dashboard and manage appointments</p>
+    <h2 class="login-title" id="t-login-h">Bərbər girişi</h2>
+    <p class="login-sub" id="t-login-p">İdarə panelinə daxil olun</p>
     <div class="login-tabs">
-      <button class="ltab active" id="lt-login" onclick="showLoginTab('login')" id="t-signin">Sign in</button>
-      <button class="ltab" id="lt-signup" onclick="showLoginTab('signup')" id="t-create">Create account</button>
+      <button class="ltab active" id="lt-login" onclick="showLoginTab('login')">Daxil ol</button>
+      <button class="ltab" id="lt-signup" onclick="showLoginTab('signup')">Hesab yarat</button>
     </div>
     <div id="login-content"></div>
   </div>
@@ -649,75 +739,162 @@ textarea.ff{resize:vertical;min-height:80px}
 <div class="page" id="page-dashboard">
   <div class="dash-layout">
     <div class="dash-header">
-      <div class="dash-greeting"><p id="t-dash-greet">Good morning</p><h2 id="dash-barber-name">Loading...</h2></div>
+      <div class="dash-greeting"><p id="t-dash-greet">Sabahınız xeyir</p><h2 id="dash-barber-name">Yüklənir...</h2></div>
       <div style="display:flex;align-items:center;gap:10px">
-        <span class="status-badge" id="dash-status-badge">Active</span>
-        <button class="btn-sec" style="padding:7px 14px;font-size:13px" onclick="logout()" id="t-logout">Logout</button>
+        <span class="status-badge" id="dash-status-badge">Aktiv</span>
+        <button class="btn-sec" style="padding:7px 14px;font-size:13px" onclick="logout()" id="t-logout">Çıxış</button>
       </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label" id="t-m1">Today's bookings</div><div class="metric-val" id="dash-today">—</div></div>
-      <div class="metric"><div class="metric-label" id="t-m2">Total bookings</div><div class="metric-val" id="dash-total">—</div></div>
-      <div class="metric"><div class="metric-label" id="t-m3">Revenue (AZN)</div><div class="metric-val" id="dash-revenue">—</div></div>
-      <div class="metric"><div class="metric-label" id="t-m4">Rating</div><div class="metric-val" id="dash-rating">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m1">Bu günün sifarişləri</div><div class="metric-val" id="dash-today">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m2">Cəmi sifarişlər</div><div class="metric-val" id="dash-total">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m3">Gəlir (AZN)</div><div class="metric-val" id="dash-revenue">—</div></div>
+      <div class="metric"><div class="metric-label" id="t-m4">Reytinq</div><div class="metric-val" id="dash-rating">—</div></div>
     </div>
     <div class="dash-grid">
-      <div class="dash-card"><h3 id="t-dash-today">Today's appointments</h3><div id="dash-appts"><div class="loading">Loading...</div></div></div>
+      <div class="dash-card"><h3 id="t-dash-today">Bu günün görüşləri</h3><div id="dash-appts"><div class="loading">Yüklənir...</div></div></div>
       <div class="dash-card">
-        <h3 id="t-dash-slots">Available slots today</h3>
+        <h3 id="t-dash-slots">Bu günün boş slotları</h3>
         <div class="slot-grid" id="dash-slots"></div>
         <div class="divider"></div>
-        <h3 id="t-dash-reviews">Recent reviews</h3>
-        <div id="dash-reviews"><div class="empty-state">No reviews yet</div></div>
+        <h3 id="t-dash-reviews">Son rəylər</h3>
+        <div id="dash-reviews"><div class="empty-state">Hələ rəy yoxdur</div></div>
       </div>
     </div>
-    <div style="margin-top:20px"><div class="dash-card"><h3 id="t-dash-all">All bookings</h3><div id="dash-all-bookings"><div class="loading">Loading...</div></div></div></div>
+    <div style="margin-top:20px"><div class="dash-card"><h3 id="t-dash-all">Bütün sifarişlər</h3><div id="dash-all-bookings"><div class="loading">Yüklənir...</div></div></div></div>
     <div style="margin-top:20px"><div class="dash-card">
-      <h3>My portfolio</h3>
-      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Upload photos of your best work. Clients see these on your profile before booking.</p>
+      <h3>Mənim portfoliom</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Ən yaxşı işlərinizin fotolarını yükləyin. Müştərilər sifariş etməzdən əvvəl bunları görür.</p>
       <div class="portfolio-upload-grid" id="dash-portfolio-grid">
         <label class="add-portfolio-btn"><input type="file" accept="image/*" onchange="uploadPortfolioPhoto(this)">
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add photo</label>
+          Foto əlavə et</label>
       </div>
     </div></div>
+  </div>
+</div>
+
+<!-- CLIENT BOOKING LOOKUP (cancel without account) -->
+<div class="page" id="page-lookup">
+  <div class="lookup-layout">
+    <button class="back-link" onclick="nav('home')">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      Ana səhifəyə qayıt
+    </button>
+    <div class="page-header"><h2>Sifarişimi tap</h2><p>Sifarişinizi ləğv etmək üçün telefon nömrənizi daxil edin</p></div>
+    <div class="card-box">
+      <div class="fg"><label class="fl">Telefon nömrəniz</label><input class="ff" id="lookup-phone" placeholder="+994 50 000 00 00" type="tel" maxlength="20"></div>
+      <button class="btn-main green" onclick="lookupBookings()">Sifarişlərimi axtar</button>
+      <div id="lookup-results" style="margin-top:18px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIVACY POLICY -->
+<div class="page" id="page-privacy">
+  <div class="legal-layout">
+    <button class="back-link" onclick="nav('home')" style="margin-bottom:24px">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      Ana səhifəyə qayıt
+    </button>
+    <h1>Məxfilik Siyasəti</h1>
+    <p class="last-updated">Son yenilənmə: 2026</p>
+    <h2>1. Topladığımız məlumatlar</h2>
+    <p>Kavro.Club sifariş zamanı aşağıdakı məlumatları toplayır:</p>
+    <ul>
+      <li>Ad və soyad</li>
+      <li>Telefon nömrəsi</li>
+      <li>Sifariş tarixi, vaxtı və xidmət məlumatları</li>
+      <li>Bərbərlər üçün: email, foto, salon məlumatları</li>
+    </ul>
+    <h2>2. Məlumatların istifadəsi</h2>
+    <p>Topladığımız məlumatlar yalnız sifariş idarəetməsi, bərbər-müştəri əlaqəsi və platforma təhlükəsizliyi üçün istifadə edilir. Məlumatlarınız üçüncü tərəflərə satılmır.</p>
+    <h2>3. Məlumatların saxlanması</h2>
+    <p>Məlumatlar Supabase (Postgres) verilənlər bazasında şifrəli şəkildə saxlanılır. Bütün transferlər HTTPS vasitəsilə həyata keçirilir.</p>
+    <h2>4. Cookies və lokal yaddaş</h2>
+    <p>Biz sevimlilər funksiyası üçün brauzerinizin lokal yaddaşından istifadə edirik. Bu məlumatlar yalnız sizin cihazınızda saxlanılır.</p>
+    <h2>5. Hüquqlarınız</h2>
+    <p>İstənilən vaxt məlumatlarınızın silinməsini tələb edə bilərsiniz. Bunun üçün WhatsApp vasitəsilə bizimlə əlaqə saxlayın.</p>
+    <h2>6. Əlaqə</h2>
+    <p>WhatsApp: +994 50 342 48 80 / +994 51 300 42 19</p>
+    <div class="footer-links">
+      <button class="footer-link" onclick="nav('terms')">İstifadə Şərtləri</button>
+      <button class="footer-link" onclick="nav('home')">Ana səhifə</button>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS OF USE -->
+<div class="page" id="page-terms">
+  <div class="legal-layout">
+    <button class="back-link" onclick="nav('home')" style="margin-bottom:24px">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      Ana səhifəyə qayıt
+    </button>
+    <h1>İstifadə Şərtləri</h1>
+    <p class="last-updated">Son yenilənmə: 2026</p>
+    <h2>1. Platforma haqqında</h2>
+    <p>Kavro.Club Azərbaycanda bərbər sifariş platformasıdır. Xidmətdən istifadə etməklə siz bu şərtləri qəbul etmiş olursunuz.</p>
+    <h2>2. İstifadəçi öhdəlikləri</h2>
+    <ul>
+      <li>Düzgün ad və telefon nömrəsi daxil etmək</li>
+      <li>Sifarişi vaxtında ləğv etmək (ən azı 1 saat əvvəl)</li>
+      <li>Platformanı sui-istifadə etməmək</li>
+      <li>Yalnız real rəylər buraxmaq</li>
+    </ul>
+    <h2>3. Bərbər öhdəlikləri</h2>
+    <ul>
+      <li>Aylıq abunə haqqını vaxtında ödəmək (25 AZN/ay)</li>
+      <li>Cədvəli və xidmətləri aktual saxlamaq</li>
+      <li>Müştərilərlə hörmətli davranmaq</li>
+    </ul>
+    <h2>4. Məsuliyyətin məhdudlaşdırılması</h2>
+    <p>Kavro.Club bərbər-müştəri arasında vasitəçidir. Xidmət keyfiyyətinə görə birbaşa məsuliyyət daşımır, lakin şikayətləri araşdırır.</p>
+    <h2>5. Abunəlik</h2>
+    <p>Bərbər abunəliyi aylıq 25 AZN-dir. Ödəniş WhatsApp vasitəsilə təsdiqlənir. Ödənilmədikdə profil deaktiv edilir.</p>
+    <h2>6. Şərtlərin dəyişdirilməsi</h2>
+    <p>Kavro.Club bu şərtləri istənilən vaxt dəyişdirmək hüququnu özündə saxlayır. Mühüm dəyişikliklər haqqında istifadəçilərə məlumat veriləcək.</p>
+    <div class="footer-links">
+      <button class="footer-link" onclick="nav('privacy')">Məxfilik Siyasəti</button>
+      <button class="footer-link" onclick="nav('home')">Ana səhifə</button>
+    </div>
   </div>
 </div>
 
 <!-- ADMIN -->
 <div class="page" id="page-admin">
   <div class="admin-layout">
-    <div class="page-header"><h2>Admin panel — Kavro.Club</h2><p>Manage barber registrations and subscriptions</p></div>
+    <div class="page-header"><h2>Admin panel — Kavro.Club</h2><p>Bərbər qeydiyyatlarını və abunəlikləri idarə et</p></div>
     <div class="metrics" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
-      <div class="metric"><div class="metric-label">Active</div><div class="metric-val" id="adm-active">—</div></div>
-      <div class="metric"><div class="metric-label">Pending</div><div class="metric-val" id="adm-pending">—</div></div>
-      <div class="metric"><div class="metric-label">Deleted</div><div class="metric-val" id="adm-deleted">—</div></div>
-      <div class="metric"><div class="metric-label">Bookings</div><div class="metric-val" id="adm-bookings">—</div></div>
+      <div class="metric"><div class="metric-label">Aktiv</div><div class="metric-val" id="adm-active">—</div></div>
+      <div class="metric"><div class="metric-label">Gözləyir</div><div class="metric-val" id="adm-pending">—</div></div>
+      <div class="metric"><div class="metric-label">Silinmiş</div><div class="metric-val" id="adm-deleted">—</div></div>
+      <div class="metric"><div class="metric-label">Sifarişlər</div><div class="metric-val" id="adm-bookings">—</div></div>
     </div>
     <div class="admin-tabs">
-      <button class="atab active" id="at-all" onclick="adminFilter('all')">All</button>
-      <button class="atab" id="at-active" onclick="adminFilter('active')">Active</button>
-      <button class="atab" id="at-pending" onclick="adminFilter('pending')">Pending</button>
-      <button class="atab" id="at-deleted" onclick="adminFilter('deleted')">Deleted</button>
+      <button class="atab active" id="at-all" onclick="adminFilter('all')">Hamısı</button>
+      <button class="atab" id="at-active" onclick="adminFilter('active')">Aktiv</button>
+      <button class="atab" id="at-pending" onclick="adminFilter('pending')">Gözləyir</button>
+      <button class="atab" id="at-deleted" onclick="adminFilter('deleted')">Silinmiş</button>
     </div>
     <div class="admin-search">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" placeholder="Search by name or salon..." oninput="renderAdmin()" maxlength="100">
+      <input type="text" placeholder="Ad və ya salon ilə axtar..." oninput="renderAdmin()" maxlength="100">
     </div>
-    <div class="admin-table" id="admin-table"><div class="loading">Loading...</div></div>
+    <div class="admin-table" id="admin-table"><div class="loading">Yüklənir...</div></div>
   </div>
 </div>
 
 <script>
 // ================================================================
-// KAVRO.CLUB — JAVASCRIPT v2.0.0
+// KAVRO.CLUB — JAVASCRIPT v3.0.0
 // ================================================================
 
 // ── CONFIG ──
 const SUPABASE_URL = 'https://wipkveitbbnpeyqhmdnk.supabase.co';
-// NOTE: Anon key is safe to expose in frontend per Supabase design.
-// Real security comes from RLS policies on the database.
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpcGt2ZWl0YmJucGV5cWhtZG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjM2MDUsImV4cCI6MjA5MjE5OTYwNX0.R_E-UWLdfMVw0pHTGkT97WB8AJnf1ci9tZtyt52uctM';
+const TELEGRAM_TOKEN = '8645466274:AAF_9hBTJwOdMyMIO1OFf8vQPEbct_0WcB0';
+const TELEGRAM_CHAT_ID = '7568815452';
 const ADMIN_SECRET = '#admin-kavro2026';
 const WHATSAPP_1 = '+994 50 342 48 80';
 const WHATSAPP_2 = '+994 51 300 42 19';
@@ -727,15 +904,52 @@ const SUBSCRIPTION_PRICE = '25';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── RATE LIMITING (5 attempts per 15 minutes) ──
-// Stored in memory — resets on page refresh which is fine
+// ── TELEGRAM NOTIFICATIONS ──
+async function sendTelegram(message) {
+  try {
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'HTML'
+      })
+    });
+  } catch(e) {
+    console.log('Telegram notification failed:', e);
+  }
+}
+
+function buildBookingNotification(type, data) {
+  if (type === 'new') {
+    return `📅 <b>YENİ SİFARİŞ</b>\n\n` +
+      `👤 Müştəri: ${data.clientName}\n` +
+      `📞 Telefon: ${data.clientPhone}\n` +
+      `✂️ Bərbər: ${data.barberName}\n` +
+      `💈 Xidmət: ${data.services}\n` +
+      `📆 Tarix: ${data.date}\n` +
+      `⏰ Vaxt: ${data.time}\n` +
+      `💰 Cəmi: ${data.totalPrice} AZN\n\n` +
+      `🔗 kavro.club`;
+  } else if (type === 'cancel') {
+    return `❌ <b>SİFARİŞ LƏĞV EDİLDİ</b>\n\n` +
+      `👤 Müştəri: ${data.clientName}\n` +
+      `📞 Telefon: ${data.clientPhone}\n` +
+      `✂️ Bərbər: ${data.barberName}\n` +
+      `📆 Tarix: ${data.date}\n` +
+      `⏰ Vaxt: ${data.time}\n\n` +
+      `Slot artıq boşdur.`;
+  }
+}
+
+// ── RATE LIMITING ──
 const rateLimitStore = {};
 function checkRateLimit(key) {
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutes
+  const windowMs = 15 * 60 * 1000;
   const maxAttempts = 5;
   if (!rateLimitStore[key]) rateLimitStore[key] = [];
-  // Remove attempts older than 15 minutes
   rateLimitStore[key] = rateLimitStore[key].filter(t => now - t < windowMs);
   if (rateLimitStore[key].length >= maxAttempts) {
     const oldest = rateLimitStore[key][0];
@@ -747,7 +961,6 @@ function checkRateLimit(key) {
 }
 
 // ── INPUT SANITIZATION ──
-// Strip HTML tags and limit length to prevent XSS
 function sanitize(str, maxLen = 200) {
   if (typeof str !== 'string') return '';
   return str
@@ -757,7 +970,6 @@ function sanitize(str, maxLen = 200) {
 }
 
 function sanitizePhone(str) {
-  // Only allow digits, spaces, +, -, ()
   return str.replace(/[^\d\s+\-()]/g, '').trim().slice(0, 20);
 }
 
@@ -765,8 +977,53 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length < 200;
 }
 
+// ── LOCAL DATE (fixes midnight bug) ──
+// Always use local date, never UTC, to avoid midnight crossing issues
+function getLocalDateStr(d) {
+  const date = d || new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getTodayLocal() {
+  return getLocalDateStr(new Date());
+}
+
+// ── FAVORITES (localStorage) ──
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('kavro_favorites') || '[]'); }
+  catch(e) { return []; }
+}
+
+function isFavorite(barberId) {
+  return getFavorites().includes(barberId);
+}
+
+function toggleFavorite(barberId) {
+  let favs = getFavorites();
+  if (favs.includes(barberId)) {
+    favs = favs.filter(id => id !== barberId);
+    toast('Sevimlilərdən çıxarıldı');
+  } else {
+    favs.push(barberId);
+    toast('Sevimlilərə əlavə edildi ★');
+  }
+  try { localStorage.setItem('kavro_favorites', JSON.stringify(favs)); }
+  catch(e) {}
+  return favs.includes(barberId);
+}
+
+function toggleFavFromProfile() {
+  if (!currentProfileBarber) return;
+  const isNowFav = toggleFavorite(currentProfileBarber.id);
+  document.getElementById('pp-fav-btn').textContent = isNowFav ? '★' : '☆';
+  document.getElementById('pp-fav-btn').style.color = isNowFav ? 'var(--gold)' : '';
+}
+
 // ── STATE ──
-let currentLang = 'en';
+let currentLang = 'az';
 let currentUser = null;
 let currentBarberProfile = null;
 let allBarbers = [];
@@ -775,16 +1032,33 @@ let barberFilter = 'all';
 let adminFilter_current = 'all';
 let deleteTargetId = null;
 let cancelTargetId = null;
-let reviewTargetBookingId = null;
+let cancelBookingData = null;
 let reviewTargetBarberId = null;
 let selectedRating = 0;
-let bState = { barber:null, barberId:null, salonName:null, service:null, serviceId:null, servicePrice:null, serviceDur:null, time:null, date:0, step:0 };
+let bState = { barber:null, barberId:null, salonName:null, services:[], time:null, date:0, step:0 };
 let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'', email:'', password:'' };
-let regServices = [{ n:'Haircut', p:'10' }, { n:'Beard trim', p:'5' }];
+let regServices = [{ n:'Saç kəsimi', p:'10' }, { n:'Saqqal', p:'5' }];
 let activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
 const regDaysAll = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+let pwaPrompt = null;
 
-// ── DYNAMIC DATES (next 7 days from today) ──
+// ── STATE PERSISTENCE (fixes page refresh bug) ──
+function saveNavState(page, extra) {
+  try {
+    sessionStorage.setItem('kavro_page', page);
+    if (extra) sessionStorage.setItem('kavro_state', JSON.stringify(extra));
+  } catch(e) {}
+}
+
+function loadNavState() {
+  try {
+    const page = sessionStorage.getItem('kavro_page');
+    const state = sessionStorage.getItem('kavro_state');
+    return { page, state: state ? JSON.parse(state) : null };
+  } catch(e) { return {}; }
+}
+
+// ── DYNAMIC DATES ──
 function getNextDates() {
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const dates = [];
@@ -792,66 +1066,21 @@ function getNextDates() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    dates.push({ d: days[d.getDay()], n: d.getDate(), full: d.toISOString().split('T')[0] });
+    dates.push({ d: days[d.getDay()], n: d.getDate(), full: getLocalDateStr(d) });
   }
   return dates;
 }
 
-const DATES = getNextDates();
 const ALL_TIMES = generateTimes('10:00','22:00',30);
 
-// ── TRANSLATIONS (ALL PAGES) ──
+// ── TRANSLATIONS ──
 const T = {
-  en: {
-    'hero-tag':'Now in Baku, Azerbaijan',
-    'hero-h1':'Book your next cut<br>in <em>seconds</em>',
-    'hero-p':'Find verified barbers near you, pick a time, and show up.',
-    'browse-btn':'Browse barbers','barber-btn':"I'm a barber",
-    'urgent-text':'I need a cut right now',
-    'urgent-title':'I need a cut right now','urgent-desc':"We'll find the earliest available slot today.",
-    'stat1':'Active barbers','stat2':'Bookings made','stat3':'Average rating',
-    'feat-h':"Everything you need, nothing you don't",
-    'feat-sub':'Built for barbers in Azerbaijan, designed for everyone.',
-    'f1h':'Find a barber','f1p':'Browse verified barbers ranked by rating.',
-    'f2h':'Real-time slots','f2p':"If the slot is green, it's yours.",
-    'f3h':'Book in 60 seconds','f3p':'Clients only need a name and phone number.',
-    'f5h':'Find on the map','f5p':'Open in Google or Apple Maps instantly.',
-    'f6h':'Ranked barbers','f6p':'Top rated appear first. Real reviews only.',
-    'f7h':'Secure platform','f7p':'Rate limiting, input validation, secure login.',
-    'barbers-h':'Barbers in Baku','barbers-p':'Ranked by rating — highest first',
-    'back':'Back to barbers',
-    'reg-h':'Join as a barber','reg-p':'Set up your profile and start receiving bookings',
-    'reg-warn':'Your profile will only go live after payment is confirmed.',
-    'tab1':'Profile','tab2':'Schedule','tab3':'Services','tab4':'Payment',
-    'login-h':'Barber login','login-p':'Access your dashboard and manage appointments',
-    'signin':'Sign in','create':'Create account',
-    'dash-greet':'Good morning','logout':'Logout',
-    'm1':"Today's bookings",'m2':'Total bookings','m3':'Revenue (AZN)','m4':'Rating',
-    'dash-today':"Today's appointments",'dash-slots':'Available slots today',
-    'dash-reviews':'Recent reviews','dash-all':'All bookings',
-    'cancel':'Cancel','find-btn':'Find me a barber',
-    'review-title':'Rate your experience','review-desc':'How was your appointment?',
-    'review-label':'Comment (optional)',
-    'cancel-title':'Cancel booking?','cancel-desc':'This will free up the time slot.',
-    'fall':'All','ftop':'Top rated',
-    'book-now':'Book appointment',
-    'portfolio-title':'Portfolio','portfolio-empty':'No portfolio photos yet',
-    'reviews-title':'Reviews','reviews-empty':'No reviews yet — be the first!',
-    'leave-review':'Leave a review',
-    'back-barbers':'Back to barbers',
-    'review-phone':'Your phone number (to verify your booking)',
-    'confirm-barber':'Barber','confirm-salon':'Salon','confirm-service':'Service',
-    'confirm-time':'Time','confirm-price':'Price','confirm-payment':'Payment',
-    'confirm-btn':'Confirm booking',
-    'success-title':"You're booked!",'success-sub':'has been notified. See you soon.',
-    'reg-profile':'Profile','reg-schedule':'Schedule','reg-services':'Services','reg-payment':'Payment',
-  },
   az: {
     'hero-tag':'İndi Bakıda, Azərbaycanda',
     'hero-h1':'Növbəti saç kəsiminə<br><em>saniyələrdə</em> yazıl',
-    'hero-p':'Ən yaxın bərbərləri tap, vaxt seç və gəl.',
+    'hero-p':'Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.',
     'browse-btn':'Bərbərlərə bax','barber-btn':'Mən bərbərəm',
-    'urgent-text':'İndi dərhal bərbərə getmək istəyirəm',
+    'urgent-text':'İndi dərhal bərbər lazımdır',
     'urgent-title':'İndi bərbər lazımdır','urgent-desc':'Bu gün ən erkən boş slotu tapacağıq.',
     'stat1':'Aktiv bərbərlər','stat2':'Sifarişlər','stat3':'Orta reytinq',
     'feat-h':'Lazım olan hər şey, lazımsız heç nə',
@@ -860,8 +1089,8 @@ const T = {
     'f2h':'Real vaxt slotları','f2p':'Əgər slot yaşıldırsa, sizindir.',
     'f3h':'60 saniyədə sifariş et','f3p':'Müştərilərə yalnız ad və telefon lazımdır.',
     'f5h':'Xəritədə tap','f5p':'Google və ya Apple Maps-da açın.',
-    'f6h':'Reytinqli bərbərlər','f6p':'Ən yüksək reytinqlilər əvvəl görünür.',
-    'f7h':'Təhlükəsiz platforma','f7p':'Giriş məhdudiyyəti, girişin qorunması.',
+    'f6h':'Sevimlilərin','f6p':'Bərbərləri ulduz ilə əlavə et, hesab olmadan saxla.',
+    'f7h':'Təhlükəsiz platforma','f7p':'Giriş məhdudiyyəti, giriş qorunması.',
     'barbers-h':'Bakıdakı bərbərlər','barbers-p':'Reytinqə görə sıralanır',
     'back':'Bərbərlərə qayıt',
     'reg-h':'Bərbər kimi qoşul','reg-p':'Profilinizi yaradın və sifarişlər almağa başlayın',
@@ -871,24 +1100,14 @@ const T = {
     'signin':'Daxil ol','create':'Hesab yarat',
     'dash-greet':'Sabahınız xeyir','logout':'Çıxış',
     'm1':'Bu günün sifarişləri','m2':'Cəmi sifarişlər','m3':'Gəlir (AZN)','m4':'Reytinq',
-    'dash-today':'Bu günün görüşləri','dash-slots':'Mövcud slotlar',
+    'dash-today':'Bu günün görüşləri','dash-slots':'Boş slotlar',
     'dash-reviews':'Son rəylər','dash-all':'Bütün sifarişlər',
     'cancel':'Ləğv et','find-btn':'Bərbər tap',
     'review-title':'Təcrübənizi qiymətləndirin','review-desc':'Görüşünüz necə idi?',
     'review-label':'Şərh (isteğe bağlı)',
-    'cancel-title':'Sifarişi ləğv et?','cancel-desc':'Bu zaman slotu azad ediləcək.',
-    'fall':'Hamısı','ftop':'Ən yüksək',
-    'book-now':'Görüş sifariş et',
-    'portfolio-title':'Portfolio','portfolio-empty':'Hələ portfolio şəkli yoxdur',
-    'reviews-title':'Rəylər','reviews-empty':'Hələ rəy yoxdur — ilk siz olun!',
-    'leave-review':'Rəy buraxın',
-    'back-barbers':'Bərbərlərə qayıt',
-    'review-phone':'Telefon nömrəniz (sifarişi doğrulamaq üçün)',
-    'confirm-barber':'Bərbər','confirm-salon':'Salon','confirm-service':'Xidmət',
-    'confirm-time':'Vaxt','confirm-price':'Qiymət','confirm-payment':'Ödəniş',
-    'confirm-btn':'Sifarişi təsdiqlə',
-    'success-title':'Sifarişiniz qeydə alındı!','success-sub':'xəbərdar edildi. Tezliklə görüşərik.',
-    'reg-profile':'Profil','reg-schedule':'Cədvəl','reg-services':'Xidmətlər','reg-payment':'Ödəniş',
+    'cancel-title':'Sifarişi ləğv et?','cancel-desc':'Bu zaman slotu digər müştərilər üçün azad ediləcək.',
+    'fall':'Hamısı','ffavs':'★ Sevimlilər',
+    'book-now':'Sifariş et',
   },
   ru: {
     'hero-tag':'Теперь в Баку, Азербайджан',
@@ -904,7 +1123,7 @@ const T = {
     'f2h':'Слоты в реальном времени','f2p':'Если слот зелёный — он ваш.',
     'f3h':'Запись за 60 секунд','f3p':'Клиентам нужны только имя и телефон.',
     'f5h':'Найти на карте','f5p':'Открыть в Google или Apple Maps.',
-    'f6h':'Рейтинг барберов','f6p':'Лучшие барберы отображаются первыми.',
+    'f6h':'Избранное','f6p':'Добавляйте барберов в избранное, без аккаунта.',
     'f7h':'Безопасная платформа','f7p':'Ограничение входов, защита данных.',
     'barbers-h':'Барберы в Баку','barbers-p':'Отсортировано по рейтингу',
     'back':'Назад к барберам',
@@ -921,22 +1140,45 @@ const T = {
     'review-title':'Оцените визит','review-desc':'Как прошёл ваш приём?',
     'review-label':'Комментарий (необязательно)',
     'cancel-title':'Отменить запись?','cancel-desc':'Это освободит время для других клиентов.',
-    'fall':'Все','ftop':'Топ рейтинг',
+    'fall':'Все','ffavs':'★ Избранное',
     'book-now':'Записаться',
-    'portfolio-title':'Портфолио','portfolio-empty':'Фото работ пока нет',
-    'reviews-title':'Отзывы','reviews-empty':'Отзывов пока нет — будьте первым!',
-    'leave-review':'Оставить отзыв',
-    'back-barbers':'Назад к барберам',
-    'review-phone':'Ваш номер телефона (для подтверждения записи)',
-    'confirm-barber':'Барбер','confirm-salon':'Салон','confirm-service':'Услуга',
-    'confirm-time':'Время','confirm-price':'Цена','confirm-payment':'Оплата',
-    'confirm-btn':'Подтвердить запись',
-    'success-title':'Вы записаны!','success-sub':'уведомлён. До встречи.',
-    'reg-profile':'Профиль','reg-schedule':'Расписание','reg-services':'Услуги','reg-payment':'Оплата',
+  },
+  en: {
+    'hero-tag':'Now in Baku, Azerbaijan',
+    'hero-h1':'Book your next cut<br>in <em>seconds</em>',
+    'hero-p':'Find verified barbers near you, pick a time, and show up.',
+    'browse-btn':'Browse barbers','barber-btn':"I'm a barber",
+    'urgent-text':'I need a cut right now',
+    'urgent-title':'I need a cut right now','urgent-desc':"We'll find the earliest available slot today.",
+    'stat1':'Active barbers','stat2':'Bookings made','stat3':'Average rating',
+    'feat-h':"Everything you need, nothing you don't",
+    'feat-sub':'Built for barbers in Azerbaijan, designed for everyone.',
+    'f1h':'Find a barber','f1p':'Browse verified barbers ranked by rating.',
+    'f2h':'Real-time slots','f2p':"If the slot is green, it's yours.",
+    'f3h':'Book in 60 seconds','f3p':'Clients only need a name and phone number.',
+    'f5h':'Find on the map','f5p':'Open in Google or Apple Maps instantly.',
+    'f6h':'Favorites','f6p':"Star barbers, remembered on your device — no login needed.",
+    'f7h':'Secure platform','f7p':'Rate limiting, input validation, secure login.',
+    'barbers-h':'Barbers in Baku','barbers-p':'Ranked by rating — highest first',
+    'back':'Back to barbers',
+    'reg-h':'Join as a barber','reg-p':'Set up your profile and start receiving bookings',
+    'reg-warn':'Your profile will only go live after payment is confirmed.',
+    'tab1':'Profile','tab2':'Schedule','tab3':'Services','tab4':'Payment',
+    'login-h':'Barber login','login-p':'Access your dashboard and manage appointments',
+    'signin':'Sign in','create':'Create account',
+    'dash-greet':'Good morning','logout':'Logout',
+    'm1':"Today's bookings",'m2':'Total bookings','m3':'Revenue (AZN)','m4':'Rating',
+    'dash-today':"Today's appointments",'dash-slots':'Available slots today',
+    'dash-reviews':'Recent reviews','dash-all':'All bookings',
+    'cancel':'Cancel','find-btn':'Find me a barber',
+    'review-title':'Rate your experience','review-desc':'How was your appointment?',
+    'review-label':'Comment (optional)',
+    'cancel-title':'Cancel booking?','cancel-desc':'This will free up the time slot.',
+    'fall':'All','ffavs':'★ Favorites',
+    'book-now':'Book appointment',
   }
 };
 
-// Key → element ID mapping for translations
 const TRANS_MAP = {
   'hero-tag':'t-hero-tag','hero-h1':'t-hero-h1','hero-p':'t-hero-p',
   'browse-btn':'t-browse-btn','barber-btn':'t-barber-btn','urgent-text':'t-urgent-text',
@@ -957,22 +1199,8 @@ const TRANS_MAP = {
   'cancel':'t-cancel','find-btn':'t-find-btn',
   'review-title':'t-review-title','review-desc':'t-review-desc','review-label':'t-review-label',
   'cancel-title':'t-cancel-title','cancel-desc':'t-cancel-desc',
-  'fall':'fb-all','ftop':'fb-top',
+  'fall':'fb-all','ffavs':'fb-favs',
 };
-
-// Apply translations to dynamically rendered pages too
-function applyDynamicTranslations() {
-  const tr = T[currentLang];
-  // Profile page
-  const profileBack = document.querySelector('#page-profile .back-link span');
-  if (profileBack) profileBack.textContent = tr['back-barbers'] || 'Back to barbers';
-  const bookBtn = document.querySelector('.book-now-btn');
-  if (bookBtn) bookBtn.textContent = tr['book-now'] || 'Book appointment';
-  const portfolioH = document.querySelector('.portfolio-section h2');
-  if (portfolioH) portfolioH.textContent = tr['portfolio-title'] || 'Portfolio';
-  const reviewsH = document.querySelector('.reviews-section h2');
-  if (reviewsH) reviewsH.textContent = tr['reviews-title'] || 'Reviews';
-}
 
 function setLang(lang, btn) {
   currentLang = lang;
@@ -985,30 +1213,21 @@ function setLang(lang, btn) {
   });
   const si = document.getElementById('barber-search');
   if (si) si.placeholder = lang==='az'?'Bərbər, salon axtar...':lang==='ru'?'Поиск барберов...':'Search barbers, salons...';
-  // Apply to dynamic pages
-  applyDynamicTranslations();
-  // Re-render active reg tab so inner content translates
-  const activeRegTab = document.querySelector('.rsb.active');
-  if (activeRegTab && document.getElementById('page-register').classList.contains('active')) {
-    const tabId = activeRegTab.id.replace('rs-','');
-    regTab(tabId);
-  }
-  // Re-render login tab
-  const activeLoginTab = document.querySelector('.ltab.active');
-  if (activeLoginTab && document.getElementById('page-login').classList.contains('active')) {
-    showLoginTab(activeLoginTab.id === 'lt-login' ? 'login' : 'signup');
-  }
+  try { sessionStorage.setItem('kavro_lang', lang); } catch(e) {}
 }
 
 // ── NAV ──
 function nav(page) {
   if (page==='dashboard' && !currentUser) { nav('login'); return; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
+  const el = document.getElementById('page-'+page);
+  if (!el) return;
+  el.classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const nb = document.getElementById('nb-'+page);
   if (nb) nb.classList.add('active');
   window.scrollTo(0,0);
+  saveNavState(page);
   if (page==='barbers') loadBarbers();
   if (page==='admin') loadAdmin();
   if (page==='dashboard') loadDashboard();
@@ -1024,7 +1243,11 @@ function closeMobileNav() { document.getElementById('mobile-nav').classList.remo
 // ── AUTH ──
 async function checkAuth() {
   const { data:{session} } = await db.auth.getSession();
-  if (session) { currentUser=session.user; await loadBarberProfile(); showLoggedInUI(); }
+  if (session) {
+    currentUser = session.user;
+    await loadBarberProfile();
+    showLoggedInUI();
+  }
 }
 
 async function loadBarberProfile() {
@@ -1037,19 +1260,23 @@ function showLoggedInUI() {
   if (!currentUser) return;
   const name = currentBarberProfile?.name || currentUser.email.split('@')[0];
   document.getElementById('nb-login').style.display='none';
+  document.getElementById('nb-register').style.display='none'; // hide "For barbers" when logged in
   document.getElementById('nb-dashboard').style.display='inline-flex';
   document.getElementById('user-pill-btn').style.display='flex';
   document.getElementById('user-pill-name').textContent=name;
   document.getElementById('mob-login-btn').style.display='none';
+  document.getElementById('mob-register-btn').style.display='none';
   document.getElementById('mob-dash-btn').style.display='block';
   document.getElementById('mob-logout-btn').style.display='block';
 }
 
 function showLoggedOutUI() {
   document.getElementById('nb-login').style.display='inline-flex';
+  document.getElementById('nb-register').style.display='inline-flex';
   document.getElementById('nb-dashboard').style.display='none';
   document.getElementById('user-pill-btn').style.display='none';
   document.getElementById('mob-login-btn').style.display='block';
+  document.getElementById('mob-register-btn').style.display='block';
   document.getElementById('mob-dash-btn').style.display='none';
   document.getElementById('mob-logout-btn').style.display='none';
 }
@@ -1057,64 +1284,67 @@ function showLoggedOutUI() {
 async function logout() {
   await db.auth.signOut();
   currentUser=null; currentBarberProfile=null;
-  showLoggedOutUI(); nav('home'); toast('Logged out successfully');
+  showLoggedOutUI();
+  try { sessionStorage.removeItem('kavro_page'); } catch(e) {}
+  nav('home');
+  toast('Çıxış edildi');
 }
 
 function showLoginTab(tab) {
   document.getElementById('lt-login').classList.toggle('active',tab==='login');
   document.getElementById('lt-signup').classList.toggle('active',tab==='signup');
   const c = document.getElementById('login-content');
-  const T_cur = T[currentLang];
+  const Tc = T[currentLang];
   if (tab==='login') {
     c.innerHTML=`
       <div class="fg"><label class="fl">Email</label><input class="ff" id="login-email" type="email" placeholder="your@email.com" maxlength="200"></div>
-      <div class="fg"><label class="fl">Password</label><input class="ff" id="login-pass" type="password" placeholder="Your password" maxlength="200"></div>
+      <div class="fg"><label class="fl">Şifrə</label><input class="ff" id="login-pass" type="password" placeholder="Şifrəniz" maxlength="200"></div>
       <div id="login-error"></div>
-      <button class="btn-main green" style="margin-top:8px" onclick="signIn()">${T_cur['signin']||'Sign in'}</button>
-      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">No account? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('signup')">${T_cur['create']||'Create one'}</span></p>`;
+      <button class="btn-main green" style="margin-top:8px" onclick="signIn()">${Tc['signin']||'Daxil ol'}</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Hesabınız yoxdur? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('signup')">${Tc['create']||'Yarat'}</span></p>`;
   } else {
     c.innerHTML=`
       <div class="fg"><label class="fl">Email</label><input class="ff" id="signup-email" type="email" placeholder="your@email.com" maxlength="200"></div>
-      <div class="fg"><label class="fl">Password (min 6 chars)</label><input class="ff" id="signup-pass" type="password" placeholder="Create a password" maxlength="200"></div>
+      <div class="fg"><label class="fl">Şifrə (min 6 simvol)</label><input class="ff" id="signup-pass" type="password" placeholder="Şifrə yarat" maxlength="200"></div>
       <div id="signup-error"></div>
-      <button class="btn-main green" style="margin-top:8px" onclick="signUp()">${T_cur['create']||'Create account'}</button>
-      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Have account? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('login')">${T_cur['signin']||'Sign in'}</span></p>`;
+      <button class="btn-main green" style="margin-top:8px" onclick="signUp()">${Tc['create']||'Hesab yarat'}</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Hesabınız var? <span style="color:var(--green);cursor:pointer" onclick="showLoginTab('login')">${Tc['signin']||'Daxil ol'}</span></p>`;
   }
 }
 
 async function signIn() {
   const rl = checkRateLimit('login');
   if (rl.blocked) {
-    document.getElementById('login-error').innerHTML=`<div class="rate-limit-msg">Too many attempts. Please wait ${rl.waitMins} minute(s) before trying again.</div>`;
+    document.getElementById('login-error').innerHTML=`<div class="rate-limit-msg">Çox cəhd. ${rl.waitMins} dəqiqə gözləyin.</div>`;
     return;
   }
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
-  if (!email||!pass) { toast('Please fill in all fields'); return; }
-  if (!validateEmail(email)) { toast('Please enter a valid email'); return; }
+  if (!email||!pass) { toast('Bütün sahələri doldurun'); return; }
+  if (!validateEmail(email)) { toast('Düzgün email daxil edin'); return; }
   const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
   if (error) { document.getElementById('login-error').innerHTML=`<div class="error-banner">${sanitize(error.message)}</div>`; return; }
-  currentUser=data.user; await loadBarberProfile(); showLoggedInUI(); toast('Welcome back!'); nav('dashboard');
+  currentUser=data.user; await loadBarberProfile(); showLoggedInUI(); toast('Xoş gəldiniz!'); nav('dashboard');
 }
 
 async function signUp() {
   const rl = checkRateLimit('signup');
   if (rl.blocked) {
-    document.getElementById('signup-error').innerHTML=`<div class="rate-limit-msg">Too many attempts. Please wait ${rl.waitMins} minute(s).</div>`;
+    document.getElementById('signup-error').innerHTML=`<div class="rate-limit-msg">Çox cəhd. ${rl.waitMins} dəqiqə gözləyin.</div>`;
     return;
   }
   const email = document.getElementById('signup-email').value.trim();
   const pass = document.getElementById('signup-pass').value;
-  if (!email||!pass) { toast('Please fill in all fields'); return; }
-  if (!validateEmail(email)) { toast('Please enter a valid email'); return; }
-  if (pass.length<6) { toast('Password must be at least 6 characters'); return; }
+  if (!email||!pass) { toast('Bütün sahələri doldurun'); return; }
+  if (!validateEmail(email)) { toast('Düzgün email daxil edin'); return; }
+  if (pass.length<6) { toast('Şifrə ən az 6 simvol olmalıdır'); return; }
   const { error } = await db.auth.signUp({ email, password:pass });
   if (error) { document.getElementById('signup-error').innerHTML=`<div class="error-banner">${sanitize(error.message)}</div>`; return; }
-  toast('Account created! Check your email to verify, then sign in.');
+  toast('Hesab yaradıldı! Email-inizi yoxlayın, sonra daxil olun.');
   showLoginTab('login');
 }
 
-// ── HOME ──
+// ── HOME STATS ──
 async function loadHomeStats() {
   const { data:barbers } = await db.from('barbers').select('id').eq('status','active');
   const { data:bookings } = await db.from('bookings').select('id');
@@ -1124,10 +1354,10 @@ async function loadHomeStats() {
 
 async function findUrgent() {
   const r = document.getElementById('urgent-result');
-  r.innerHTML='<div class="loading" style="padding:16px">Searching...</div>';
-  const today=new Date().toISOString().split('T')[0];
+  r.innerHTML='<div class="loading" style="padding:16px">Axtarılır...</div>';
+  const today = getTodayLocal();
   const { data:barbers } = await db.from('barbers').select('*,salons(name)').eq('status','active').order('rating',{ascending:false});
-  if (!barbers||barbers.length===0) { r.innerHTML='<p style="color:var(--gray);font-size:14px">No barbers available right now.</p>'; return; }
+  if (!barbers||barbers.length===0) { r.innerHTML='<p style="color:var(--gray);font-size:14px">Hal-hazırda bərbər yoxdur.</p>'; return; }
   const now=new Date();
   const currentTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   for (const barber of barbers) {
@@ -1135,22 +1365,33 @@ async function findUrgent() {
     const bookedTimes=(booked||[]).map(b=>b.time);
     const available=ALL_TIMES.filter(t=>t>currentTime&&!bookedTimes.includes(t));
     if (available.length>0) {
-      r.innerHTML=`<div class="urgent-result"><h4>${sanitize(barber.name)}</h4><p>${sanitize(barber.salons?.name||'Independent')} · Next slot: <strong>${available[0]}</strong> today</p></div>`;
-      document.querySelector('#urgent-modal .modal-btns').innerHTML=`
-        <button class="btn-sec" onclick="closeModal('urgent-modal')">${T[currentLang]['cancel']||'Cancel'}</button>
-        <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="closeModal('urgent-modal');startBookingBarber('${barber.id}','${sanitize(barber.name)}','${sanitize(barber.salons?.name||'')}')">Book ${available[0]}</button>`;
+      r.innerHTML=`<div class="urgent-result"><h4>${sanitize(barber.name)}</h4><p>${sanitize(barber.salons?.name||'Müstəqil')} · Növbəti slot: <strong>${available[0]}</strong> bu gün</p></div>`;
+      document.getElementById('urgent-modal-btns').innerHTML=`
+        <button class="btn-sec" onclick="closeModal('urgent-modal')">Ləğv et</button>
+        <button class="btn-main green" style="width:auto;padding:11px 22px" onclick="closeModal('urgent-modal');startBookingBarber('${barber.id}','${sanitize(barber.name)}','${sanitize(barber.salons?.name||'')}')">Sifariş et ${available[0]}</button>`;
       return;
     }
   }
-  r.innerHTML='<p style="color:var(--gray);font-size:14px">No slots available today. Try tomorrow.</p>';
+  r.innerHTML='<p style="color:var(--gray);font-size:14px">Bu gün boş slot yoxdur. Sabah cəhd edin.</p>';
 }
 
 // ── BARBERS ──
 async function loadBarbers() {
-  document.getElementById('barbers-grid').innerHTML='<div class="loading">Loading barbers...</div>';
+  document.getElementById('barbers-grid').innerHTML='<div class="loading">Bərbərlər yüklənir...</div>';
   const { data,error } = await db.from('barbers').select('*,salons(name,city),services(price)').eq('status','active').order('rating',{ascending:false});
-  if (error||!data) { document.getElementById('barbers-grid').innerHTML='<div class="empty-state">Could not load barbers.</div>'; return; }
-  allBarbers=data; renderBarbers();
+  if (error||!data) { document.getElementById('barbers-grid').innerHTML='<div class="empty-state">Bərbərlər yüklənə bilmədi.</div>'; return; }
+  allBarbers=data;
+  renderFavoritesSection();
+  renderBarbers();
+}
+
+function renderFavoritesSection() {
+  const favIds = getFavorites();
+  const favBarbers = allBarbers.filter(b => favIds.includes(b.id));
+  const section = document.getElementById('favs-section');
+  if (favBarbers.length === 0) { section.style.display='none'; return; }
+  section.style.display='block';
+  document.getElementById('favs-grid').innerHTML = favBarbers.map(b => buildBarberCard(b)).join('');
 }
 
 function setFilter(f,btn) {
@@ -1160,50 +1401,69 @@ function setFilter(f,btn) {
 }
 function filterBarbers() { renderBarbers(); }
 
+function buildBarberCard(b) {
+  const minPrice=b.services?.length?Math.min(...b.services.map(s=>s.price)):null;
+  const rating=b.rating||0;
+  const photoEl=b.photo_url?`<img src="${b.photo_url}" alt="${sanitize(b.name)}" loading="lazy">`:sanitize(b.name[0]||'?');
+  const mapsUrl=b.location?`https://www.google.com/maps/search/${encodeURIComponent(b.location+' Baku')}`:null;
+  const isFav = isFavorite(b.id);
+  return `<div class="barber-card" onclick="openBarberProfile('${b.id}')">
+    <div class="bc-photo">${photoEl}
+      <button class="fav-btn ${isFav?'active':''}" onclick="event.stopPropagation();handleFavToggle('${b.id}',this)" title="${isFav?'Sevimlilərdən çıxar':'Sevimlilərə əlavə et'}">${isFav?'★':'☆'}</button>
+    </div>
+    <div class="bc-body">
+      <div class="bc-name">${sanitize(b.name)}</div>
+      <div class="bc-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>${sanitize(b.salons?.name||'Müstəqil')}</div>
+      <div class="bc-specialty">${sanitize(b.specialty||'Bütün stillər')} · ${sanitize(b.salons?.city||'Bakı')}</div>
+      <div class="bc-footer">
+        <div class="bc-rating"><span class="star">★</span>${rating>0?rating.toFixed(1):'Yeni'} (${b.review_count||0})</div>
+        <div class="bc-price">${minPrice!==null?minPrice+' AZN-dən':'—'}</div>
+      </div>
+      ${mapsUrl?`<div style="margin-top:10px"><a class="map-btn" href="${mapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Xəritədə gör</a></div>`:''}
+    </div>
+  </div>`;
+}
+
+function handleFavToggle(barberId, btn) {
+  const isNowFav = toggleFavorite(barberId);
+  btn.textContent = isNowFav ? '★' : '☆';
+  btn.classList.toggle('active', isNowFav);
+  renderFavoritesSection();
+}
+
 function renderBarbers() {
   const q=(document.getElementById('barber-search')?.value||'').toLowerCase();
+  const favIds = getFavorites();
   let list=allBarbers.filter(b=>{
-    if (barberFilter==='top'&&(b.rating||0)<4.5) return false;
+    if (barberFilter==='favs' && !favIds.includes(b.id)) return false;
     if (q&&!b.name.toLowerCase().includes(q)&&!(b.salons?.name||'').toLowerCase().includes(q)&&!(b.specialty||'').toLowerCase().includes(q)) return false;
     return true;
   });
   const g=document.getElementById('barbers-grid');
   if (!g) return;
-  if (list.length===0) { g.innerHTML='<div class="empty-state">No barbers found. More joining soon!</div>'; return; }
-  g.innerHTML=list.map((b,i)=>{
-    const minPrice=b.services?.length?Math.min(...b.services.map(s=>s.price)):null;
-    const rating=b.rating||0;
-    const rankClass=i===0?'rank-1':'';
-    const photoEl=b.photo_url?`<img src="${b.photo_url}" alt="${sanitize(b.name)}" loading="lazy">`:sanitize(b.name[0]);
-    const mapsUrl=b.location?`https://www.google.com/maps/search/${encodeURIComponent(b.location+' Baku')}`:null;
-    return `<div class="barber-card" onclick="openBarberProfile('${b.id}')">
-      <div class="bc-photo">${photoEl}<div class="rank-badge ${rankClass}">#${i+1}</div></div>
-      <div class="bc-body">
-        <div class="bc-name">${sanitize(b.name)}</div>
-        <div class="bc-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>${sanitize(b.salons?.name||'Independent')}</div>
-        <div class="bc-specialty">${sanitize(b.specialty||'All styles')} · ${sanitize(b.salons?.city||'Baku')}</div>
-        <div class="bc-footer">
-          <div class="bc-rating"><span class="star">★</span>${rating>0?rating.toFixed(1):'New'} (${b.review_count||0})</div>
-          <div class="bc-price">${minPrice!==null?'from '+minPrice+' AZN':'—'}</div>
-        </div>
-        ${mapsUrl?`<div style="margin-top:10px"><a class="map-btn" href="${mapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>View on map</a></div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  if (list.length===0) { g.innerHTML='<div class="empty-state">Bərbər tapılmadı.</div>'; return; }
+  g.innerHTML=list.map(b=>buildBarberCard(b)).join('');
 }
 
 // ── BOOKING ──
 async function startBookingBarber(barberId,barberName,salonName) {
-  bState={barberId,barber:barberName,salonName,service:null,serviceId:null,servicePrice:null,serviceDur:null,time:null,date:0,step:0};
-  nav('booking'); await renderBooking();
+  bState={barberId,barber:barberName,salonName,services:[],time:null,date:0,step:0};
+  saveNavState('booking', {barberId, barberName, salonName});
+  nav('booking');
+  await renderBooking();
 }
 
-const STEP_LABELS=['Service','Time','Confirm'];
+const STEP_LABELS_MAP = {
+  az: ['Xidmət','Vaxt','Təsdiq'],
+  ru: ['Услуга','Время','Подтверждение'],
+  en: ['Service','Time','Confirm']
+};
 
 function renderStepBar() {
-  document.getElementById('step-bar').innerHTML=STEP_LABELS.map((l,i)=>{
+  const labels = STEP_LABELS_MAP[currentLang] || STEP_LABELS_MAP['az'];
+  document.getElementById('step-bar').innerHTML=labels.map((l,i)=>{
     const done=i<bState.step,cur=i===bState.step;
-    return `<div class="step-node"><div class="step-circle ${done?'done':cur?'current':''}">${done?'✓':i+1}</div><span class="step-text ${cur?'current':''}">${l}</span></div>${i<STEP_LABELS.length-1?'<div class="step-connector"></div>':''}`;
+    return `<div class="step-node"><div class="step-circle ${done?'done':cur?'current':''}">${done?'✓':i+1}</div><span class="step-text ${cur?'current':''}">${l}</span></div>${i<labels.length-1?'<div class="step-connector"></div>':''}`;
   }).join('');
 }
 
@@ -1211,44 +1471,54 @@ async function renderBooking() {
   renderStepBar();
   const c=document.getElementById('booking-content');
   if (bState.step===0) {
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose a service</div><div class="loading">Loading...</div>`;
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Xidmət seçin</div><div class="loading">Yüklənir...</div>`;
     const { data:services } = await db.from('services').select('*').eq('barber_id',bState.barberId).order('price');
-    if (!services||services.length===0) { c.innerHTML='<div class="empty-state">No services listed yet.</div>'; return; }
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Choose a service</div>`+
-      services.map(sv=>`<div class="svc-opt ${bState.serviceId===sv.id?'sel':''}" onclick="pickService('${sv.id}','${sanitize(sv.name)}',${sv.price},${sv.duration_minutes||30})">
-        <div><div class="svc-nm">${sanitize(sv.name)}</div><div class="svc-dr">${sv.duration_minutes||30} min</div></div>
-        <div class="svc-pr">${sv.price} AZN</div>
-      </div>`).join('');
+    if (!services||services.length===0) { c.innerHTML='<div class="empty-state">Hələ xidmət əlavə edilməyib.</div>'; return; }
+    const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
+    const continueBtn = bState.services.length>0
+      ? `<button class="btn-main green" style="margin-top:16px" onclick="bState.step=1;renderBooking()">Davam et — ${totalPrice} AZN →</button>`
+      : `<button class="btn-main" style="margin-top:16px;opacity:0.4;cursor:not-allowed" disabled>Ən az bir xidmət seçin</button>`;
+    // Show summary if services selected
+    const summary = bState.services.length > 0
+      ? `<div style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px">
+          <strong>Seçildi:</strong> ${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join(' + ')} = <strong>${totalPrice} AZN</strong>
+        </div>` : '';
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Xidmət seçin (birdən çox ola bilər)</div>`+
+      summary+
+      services.map(sv=>{
+        const isSelected = bState.services.some(s=>s.id===sv.id);
+        return `<div class="svc-opt ${isSelected?'sel':''}" onclick="toggleService('${sv.id}','${sanitize(sv.name)}',${sv.price})">
+          <div><div class="svc-nm">${sanitize(sv.name)}</div></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="svc-pr">${sv.price} AZN</div>
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${isSelected?'var(--green)':'var(--gray-border)'};background:${isSelected?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${isSelected?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>':''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')+continueBtn;
   } else if (bState.step===1) {
-    // Refresh DATES every time to always start from today
     const freshDates = getNextDates();
     const dateStr = freshDates[bState.date].full;
     const today = new Date();
     const nowTime = `${String(today.getHours()).padStart(2,'0')}:${String(today.getMinutes()).padStart(2,'0')}`;
-    // Load barber's working days and start time
     const { data:barberInfo } = await db.from('barbers').select('work_days,start_time,end_time').eq('id',bState.barberId).single();
     const workDays = barberInfo?.work_days || [];
     const startTime = barberInfo?.start_time || '10:00';
     const endTime = barberInfo?.end_time || '22:00';
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    // Load booked slots for selected date
     const { data:booked } = await db.from('bookings').select('time').eq('barber_id',bState.barberId).eq('date',dateStr).eq('status','confirmed');
     const bookedSlots=(booked||[]).map(b=>b.time);
-    // Generate times based on barber's actual hours
     const barberTimes = generateTimes(startTime, endTime, 30);
-    // Build date chips — disable days barber doesn't work
     const dateRow=`<div class="date-row">${freshDates.map((d,i)=>{
-      const dayName = d.d;
-      const worksThisDay = workDays.length === 0 || workDays.includes(dayName);
+      const worksThisDay = workDays.length === 0 || workDays.includes(d.d);
       const isSelected = bState.date===i;
       return `<div class="date-chip ${isSelected?'sel':''} ${!worksThisDay?'taken':''}"
         onclick="${worksThisDay?`bState.date=${i};renderBooking()`:''}"
-        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;text-decoration:line-through':''}"
-        title="${!worksThisDay?'Barber does not work this day':''}">
+        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;':''}"
+        title="${!worksThisDay?'Bərbər bu gün işləmir':''}">
         <div class="dd">${d.d}</div><div class="dn">${d.n}</div>
       </div>`;
     }).join('')}</div>`;
-    // Filter times: hide past times for today, show barber's actual hours
     const isToday = dateStr === freshDates[0].full;
     const timeGrid=`<div class="time-grid">${barberTimes.map(t=>{
       const isPast = isToday && t <= nowTime;
@@ -1256,137 +1526,177 @@ async function renderBooking() {
       const isSelected = bState.time===t;
       const disabled = isPast || isTaken;
       return `<div class="time-chip ${isTaken?'taken':isPast?'taken':isSelected?'sel':''}"
-        onclick="${disabled?'':`pickTime('${t}')`}"
-        title="${isPast?'Time already passed':isTaken?'Already booked':''}">${t}</div>`;
+        onclick="${disabled?'':`pickTime('${t}')`}">${t}</div>`;
     }).join('')}</div>`;
     const selectedDayWorks = workDays.length === 0 || workDays.includes(freshDates[bState.date].d);
-    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">Barber does not work on this day. Please select another date.</div>` : '';
-    c.innerHTML=`<div class="slabel">Pick a date & time</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← Back</button>`;
+    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">Bu gün bərbər işləmir. Başqa gün seçin.</div>` : '';
+    c.innerHTML=`<div class="slabel">Tarix və vaxt seçin</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← Geri</button>`;
   } else if (bState.step===2) {
+    const dates = getNextDates();
     c.innerHTML=`
       <div class="confirm-card">
-        <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
-        <div class="cr"><span class="lbl">Salon</span><span class="val">${sanitize(bState.salonName||'Independent')}</span></div>
-        <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
-        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
-        <div class="cr"><span class="lbl">Price</span><span class="val" style="color:var(--green);font-weight:600">${bState.servicePrice} AZN</span></div>
-        <div class="cr"><span class="lbl">Payment</span><span class="val">Cash or card at salon</span></div>
+        <div class="cr"><span class="lbl">Bərbər</span><span class="val">${sanitize(bState.barber)}</span></div>
+        <div class="cr"><span class="lbl">Salon</span><span class="val">${sanitize(bState.salonName||'Müstəqil')}</span></div>
+        <div class="cr"><span class="lbl">Xidmətlər</span><span class="val">${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join('<br>')}</span></div>
+        <div class="cr"><span class="lbl">Vaxt</span><span class="val">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n}</span></div>
+        <div class="cr"><span class="lbl">Cəmi qiymət</span><span class="val" style="color:var(--green);font-weight:700;font-size:16px">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">Ödəniş</span><span class="val">Salonda nağd və ya kart</span></div>
       </div>
-      <div class="fg"><label class="fl">Full name</label><input class="ff" id="cn" placeholder="e.g. Ali Mammadov" maxlength="100"></div>
-      <div class="fg"><label class="fl">Phone number</label><input class="ff" id="cp" placeholder="+994 50 000 00 00" type="tel" maxlength="20"></div>
+      <div class="fg"><label class="fl">Ad Soyad</label><input class="ff" id="cn" placeholder="məs. Əli Məmmədov" maxlength="100"></div>
+      <div class="fg"><label class="fl">Telefon nömrəsi</label><input class="ff" id="cp" placeholder="+994 50 000 00 00" type="tel" maxlength="20"></div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-sec" onclick="bState.step=1;renderBooking()">← Back</button>
-        <button class="btn-main green" style="flex:1" onclick="confirmBooking()">Confirm booking</button>
+        <button class="btn-sec" onclick="bState.step=1;renderBooking()">← Geri</button>
+        <button class="btn-main green" style="flex:1" onclick="confirmBooking()">Sifarişi təsdiqlə</button>
       </div>`;
   } else if (bState.step===3) {
+    const dates = getNextDates();
     c.innerHTML=`<div class="success-screen">
       <div class="success-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
-      <div class="success-title">You're booked!</div>
-      <p class="success-sub">${sanitize(bState.barber)} has been notified. See you soon.</p>
+      <div class="success-title">Sifarişiniz qeydə alındı!</div>
+      <p class="success-sub">${sanitize(bState.barber)} xəbərdar edildi. Tezliklə görüşərik.</p>
       <div class="confirm-card" style="text-align:left;margin-bottom:18px">
-        <div class="cr"><span class="lbl">Barber</span><span class="val">${sanitize(bState.barber)}</span></div>
-        <div class="cr"><span class="lbl">Service</span><span class="val">${sanitize(bState.service)}</span></div>
-        <div class="cr"><span class="lbl">Time</span><span class="val">${bState.time} · ${getNextDates()[bState.date].d} ${getNextDates()[bState.date].n}</span></div>
-        <div class="cr" style="border-bottom:none"><span class="lbl">Price</span><span class="val" style="color:var(--green)">${bState.servicePrice} AZN</span></div>
+        <div class="cr"><span class="lbl">Bərbər</span><span class="val">${sanitize(bState.barber)}</span></div>
+        <div class="cr"><span class="lbl">Xidmətlər</span><span class="val">${bState.services.map(s=>s.name).join(', ')}</span></div>
+        <div class="cr"><span class="lbl">Vaxt</span><span class="val">${bState.time} · ${dates[bState.date]?.d||''} ${dates[bState.date]?.n||''}</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">Cəmi</span><span class="val" style="color:var(--green)">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
       </div>
-      <div class="notif-note">Booking saved. To rate your experience after your appointment, come back and visit the barber's profile.</div>
+      <div class="notif-note">Sifariş saxlanıldı. Sifarişi ləğv etmək lazım olarsa, "Sifarişimi tap" bölməsindən edə bilərsiniz.</div>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="btn-sec" onclick="nav('barbers')">Browse more barbers</button>
-        <button class="btn-main" style="width:auto;padding:12px 22px" onclick="nav('home')">Back to home</button>
+        <button class="btn-sec" onclick="nav('barbers')">Daha çox bərbər</button>
+        <button class="btn-main" style="width:auto;padding:12px 22px" onclick="nav('home')">Ana səhifə</button>
       </div>
     </div>`;
   }
 }
 
-function pickService(id,name,price,dur){bState.serviceId=id;bState.service=name;bState.servicePrice=price;bState.serviceDur=dur;bState.step=1;renderBooking();}
+function toggleService(id,name,price){
+  const idx = bState.services.findIndex(s=>s.id===id);
+  if(idx>-1){ bState.services.splice(idx,1); }
+  else { bState.services.push({id,name,price}); }
+  renderBooking();
+}
 function pickTime(t){bState.time=t;bState.step=2;renderBooking();}
 
 async function confirmBooking() {
   const rl=checkRateLimit('booking');
-  if (rl.blocked) { toast(`Too many bookings attempted. Wait ${rl.waitMins} min.`); return; }
+  if (rl.blocked) { toast(`Çox cəhd. ${rl.waitMins} dəq. gözləyin.`); return; }
   const name=sanitize(document.getElementById('cn')?.value.trim()||'',100);
   const phone=sanitizePhone(document.getElementById('cp')?.value.trim()||'');
-  if (!name||!phone) { toast('Please enter your name and phone number'); return; }
-  if (name.length<2) { toast('Please enter your full name'); return; }
-  if (phone.length<6) { toast('Please enter a valid phone number'); return; }
+  if (!name||!phone) { toast('Ad və telefon nömrənizi daxil edin'); return; }
+  if (name.length<2) { toast('Tam adınızı daxil edin'); return; }
+  if (phone.length<6) { toast('Düzgün telefon nömrəsi daxil edin'); return; }
   const btn=document.querySelector('#booking-content .btn-main.green');
-  if (btn){btn.disabled=true;btn.textContent='Saving...';}
-  const { error } = await db.from('bookings').insert({ barber_id:bState.barberId, service_id:bState.serviceId, client_name:name, client_phone:phone, date:getNextDates()[bState.date].full, time:bState.time, status:'confirmed', payment_method:'cash' });
-  if (error) { toast('Error saving booking. Please try again.'); if(btn){btn.disabled=false;btn.textContent='Confirm booking';} return; }
+  if (btn){btn.disabled=true;btn.textContent='Saxlanılır...';}
+  const bookingDate = getNextDates()[bState.date].full;
+  const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
+  const bookingRows = bState.services.map(sv=>({
+    barber_id:bState.barberId,
+    service_id:sv.id,
+    client_name:name,
+    client_phone:phone,
+    date:bookingDate,
+    time:bState.time,
+    status:'confirmed',
+    payment_method:'cash',
+    total_price:sv.price
+  }));
+  const { error } = await db.from('bookings').insert(bookingRows);
+  if (error) { toast('Xəta. Yenidən cəhd edin.'); if(btn){btn.disabled=false;btn.textContent='Sifarişi təsdiqlə';} return; }
+  // Send Telegram notification
+  const msg = buildBookingNotification('new', {
+    clientName: name,
+    clientPhone: phone,
+    barberName: bState.barber,
+    services: bState.services.map(s=>s.name).join(', '),
+    date: bookingDate,
+    time: bState.time,
+    totalPrice: totalPrice
+  });
+  await sendTelegram(msg);
   bState.step=3; renderBooking();
 }
 
-// ── CLIENT REVIEW FROM PROFILE PAGE ──
-function showReviewForm(barberId) {
-  reviewTargetBarberId = barberId;
-  reviewTargetBookingId = null;
-  selectedRating = 0;
-  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('review-comment').value = '';
-  // Show phone verification field for clients
-  const modal = document.getElementById('review-modal');
-  const existing = document.getElementById('review-phone-field');
-  if (!existing) {
-    const phoneField = document.createElement('div');
-    phoneField.id = 'review-phone-field';
-    phoneField.className = 'fg';
-    phoneField.style.marginBottom = '12px';
-    phoneField.innerHTML = '<label class="fl">Your phone number (to verify your booking)</label><input class="ff" id="review-phone" placeholder="+994 50 000 00 00" type="tel" maxlength="20">';
-    const starRating = document.getElementById('star-rating');
-    starRating.parentNode.insertBefore(phoneField, starRating);
-  }
-  openModal('review-modal');
-}
-
-async function submitReview() {
-  if (selectedRating===0) { document.getElementById('review-error').innerHTML='<div class="error-banner">Please select a star rating.</div>'; return; }
-  const comment=sanitize(document.getElementById('review-comment').value.trim(),500);
-  const phoneInput = document.getElementById('review-phone');
-  const phone = phoneInput ? sanitizePhone(phoneInput.value.trim()) : '';
-  if (!phone) { document.getElementById('review-error').innerHTML='<div class="error-banner">Please enter your phone number to verify your booking.</div>'; return; }
-  // Verify phone matches a real booking with this barber
-  const { data:bookings } = await db.from('bookings').select('id,client_name').eq('barber_id', reviewTargetBarberId).eq('client_phone', phone).eq('status','confirmed');
+// ── CLIENT BOOKING LOOKUP & CANCEL ──
+async function lookupBookings() {
+  const phone = sanitizePhone(document.getElementById('lookup-phone').value.trim());
+  if (!phone || phone.length < 6) { toast('Telefon nömrənizi daxil edin'); return; }
+  const el = document.getElementById('lookup-results');
+  el.innerHTML = '<div class="loading">Axtarılır...</div>';
+  const today = getTodayLocal();
+  const { data:bookings } = await db.from('bookings')
+    .select('*,barbers(name),services(name,price)')
+    .eq('client_phone', phone)
+    .order('date', {ascending:false})
+    .limit(20);
   if (!bookings || bookings.length === 0) {
-    document.getElementById('review-error').innerHTML='<div class="error-banner">No confirmed booking found with this phone number for this barber. Only clients who have booked can leave reviews.</div>';
+    el.innerHTML = '<div class="empty-state">Bu nömrə ilə sifariş tapılmadı.</div>';
     return;
   }
-  // Check not already reviewed
-  const bookingId = bookings[0].id;
-  const { data:existing } = await db.from('reviews').select('id').eq('booking_id', bookingId);
-  if (existing && existing.length > 0) {
-    document.getElementById('review-error').innerHTML='<div class="error-banner">You have already left a review for this booking.</div>';
-    return;
-  }
-  const clientName = bookings[0].client_name;
-  const { error } = await db.from('reviews').insert({ barber_id:reviewTargetBarberId, booking_id:bookingId, client_name:clientName, rating:selectedRating, comment });
-  if (error) { toast('Error submitting review: '+error.message); return; }
-  // Update barber average rating
-  const { data:allRevs } = await db.from('reviews').select('rating').eq('barber_id', reviewTargetBarberId);
-  if (allRevs && allRevs.length > 0) {
-    const avg = allRevs.reduce((s,r)=>s+r.rating,0)/allRevs.length;
-    await db.from('barbers').update({rating:parseFloat(avg.toFixed(1)), review_count:allRevs.length}).eq('id', reviewTargetBarberId);
-  }
-  closeModal('review-modal');
-  toast('Review submitted. Thank you!');
-  loadProfileReviews(reviewTargetBarberId);
+  el.innerHTML = bookings.map(b => {
+    const isPast = b.date < today;
+    const statusLabel = b.status === 'cancelled' ? 'Ləğv edildi' : isPast ? 'Keçdi' : 'Gələcək';
+    const statusClass = b.status === 'cancelled' ? 'cancelled' : isPast ? 'passed' : 'upcoming';
+    const canCancel = b.status === 'confirmed' && !isPast;
+    return `<div class="appt-row" style="padding:12px 0">
+      <div>
+        <div class="appt-client">${sanitize(b.barbers?.name||'Bərbər')}</div>
+        <div class="appt-time">${b.date} · ${b.time} · ${sanitize(b.services?.name||'—')}</div>
+      </div>
+      <div class="appt-actions">
+        <span class="ab ${statusClass}">${statusLabel}</span>
+        ${canCancel?`<button class="cancel-btn" onclick="clientCancelBooking('${b.id}','${sanitize(b.barbers?.name||'')}','${b.date}','${b.time}','${phone}')">Ləğv et</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// ── CLIENT CANCELLATION ──
-function initCancelBooking(bookingId) {
-  cancelTargetId=bookingId;
+async function clientCancelBooking(bookingId, barberName, date, time, phone) {
+  cancelTargetId = bookingId;
+  cancelBookingData = {barberName, date, time, clientPhone: phone};
   openModal('cancel-modal');
 }
 
 async function doCancelBooking() {
   if (!cancelTargetId) return;
-  await db.from('bookings').update({status:'cancelled'}).eq('id',cancelTargetId);
+  const { data:booking } = await db.from('bookings').select('*,barbers(name),services(name)').eq('id',cancelTargetId).single();
+  await db.from('bookings').update({status:'cancelled', cancelled_at: new Date().toISOString()}).eq('id',cancelTargetId);
   closeModal('cancel-modal');
-  toast('Booking cancelled.');
-  loadDashboard();
+  toast('Sifariş ləğv edildi.');
+  // Send Telegram cancel notification
+  const b = booking || cancelBookingData;
+  const msg = buildBookingNotification('cancel', {
+    clientName: b.client_name || '—',
+    clientPhone: b.client_phone || cancelBookingData?.clientPhone || '—',
+    barberName: b.barbers?.name || cancelBookingData?.barberName || '—',
+    date: b.date || cancelBookingData?.date || '—',
+    time: b.time || cancelBookingData?.time || '—'
+  });
+  await sendTelegram(msg);
+  // Refresh if on dashboard
+  if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+  // Refresh if on lookup
+  if (document.getElementById('page-lookup').classList.contains('active')) lookupBookings();
+  cancelTargetId = null;
+  cancelBookingData = null;
+}
+
+// Barber dashboard cancel
+function initCancelBooking(bookingId) {
+  cancelTargetId = bookingId;
+  cancelBookingData = null;
+  openModal('cancel-modal');
 }
 
 // ── REVIEWS ──
-// initReview replaced by showReviewForm for client use only
+function showReviewForm(barberId) {
+  reviewTargetBarberId = barberId;
+  selectedRating = 0;
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('review-comment').value = '';
+  document.getElementById('review-error').innerHTML = '';
+  if (document.getElementById('review-phone')) document.getElementById('review-phone').value = '';
+  openModal('review-modal');
+}
 
 function setRating(n) {
   selectedRating=n;
@@ -1396,107 +1706,112 @@ function setRating(n) {
 }
 
 async function submitReview() {
-  if (selectedRating===0) { document.getElementById('review-error').innerHTML='<div class="error-banner">Please select a star rating.</div>'; return; }
+  if (selectedRating===0) { document.getElementById('review-error').innerHTML='<div class="error-banner">Ulduz reytinqi seçin.</div>'; return; }
   const comment=sanitize(document.getElementById('review-comment').value.trim(),500);
-  // Get client name from the booking
-  const { data:booking } = await db.from('bookings').select('client_name').eq('id',reviewTargetBookingId).single();
-  if (!booking) { toast('Booking not found.'); return; }
-  const { error } = await db.from('reviews').insert({ barber_id:reviewTargetBarberId, booking_id:reviewTargetBookingId, client_name:booking.client_name, rating:selectedRating, comment });
-  if (error) { toast('Error submitting review.'); return; }
-  // Update barber's average rating
-  const { data:reviews } = await db.from('reviews').select('rating').eq('barber_id',reviewTargetBarberId);
-  if (reviews&&reviews.length>0) {
-    const avg=reviews.reduce((s,r)=>s+r.rating,0)/reviews.length;
-    await db.from('barbers').update({rating:parseFloat(avg.toFixed(1)),review_count:reviews.length}).eq('id',reviewTargetBarberId);
+  const phoneInput = document.getElementById('review-phone');
+  const phone = phoneInput ? sanitizePhone(phoneInput.value.trim()) : '';
+  if (!phone) { document.getElementById('review-error').innerHTML='<div class="error-banner">Sifarişi doğrulamaq üçün telefon nömrənizi daxil edin.</div>'; return; }
+  const { data:bookings } = await db.from('bookings').select('id,client_name').eq('barber_id', reviewTargetBarberId).eq('client_phone', phone).eq('status','confirmed');
+  if (!bookings || bookings.length === 0) {
+    document.getElementById('review-error').innerHTML='<div class="error-banner">Bu telefon nömrəsi ilə təsdiqlənmiş sifariş tapılmadı.</div>';
+    return;
+  }
+  const bookingId = bookings[0].id;
+  const { data:existing } = await db.from('reviews').select('id').eq('booking_id', bookingId);
+  if (existing && existing.length > 0) {
+    document.getElementById('review-error').innerHTML='<div class="error-banner">Bu sifariş üçün artıq rəy buraxmısınız.</div>';
+    return;
+  }
+  const clientName = bookings[0].client_name;
+  const { error } = await db.from('reviews').insert({ barber_id:reviewTargetBarberId, booking_id:bookingId, client_name:clientName, rating:selectedRating, comment });
+  if (error) { toast('Xəta: '+error.message); return; }
+  const { data:allRevs } = await db.from('reviews').select('rating').eq('barber_id', reviewTargetBarberId);
+  if (allRevs && allRevs.length > 0) {
+    const avg = allRevs.reduce((s,r)=>s+r.rating,0)/allRevs.length;
+    await db.from('barbers').update({rating:parseFloat(avg.toFixed(1)), review_count:allRevs.length}).eq('id', reviewTargetBarberId);
   }
   closeModal('review-modal');
-  toast('Review submitted. Thank you!');
-  loadDashboard();
+  toast('Rəyiniz üçün təşəkkür edirik!');
+  loadProfileReviews(reviewTargetBarberId);
 }
 
 // ── REGISTER ──
 function regTab(tab) {
   ['profile','schedule','services','payment'].forEach(t=>document.getElementById('rs-'+t).classList.toggle('active',t===tab));
-  // Update tab labels to current language
-  const Tc=T[currentLang];
-  document.getElementById('rs-profile').textContent=Tc['tab1']||'Profile';
-  document.getElementById('rs-schedule').textContent=Tc['tab2']||'Schedule';
-  document.getElementById('rs-services').textContent=Tc['tab3']||'Services';
-  document.getElementById('rs-payment').textContent=Tc['tab4']||'Payment';
   const c=document.getElementById('reg-content');
   if (tab==='profile') {
     c.innerHTML=`<div class="card-box">
-      <div class="fg"><label class="fl">Photo (optional)</label>
+      <div class="fg"><label class="fl">Foto (isteğe bağlı)</label>
         <div class="photo-upload"><input type="file" accept="image/*" onchange="previewPhoto(this)">
           <svg width="32" height="32" fill="none" stroke="var(--gray)" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <p>${regForm.photoUrl ? 'Photo uploaded ✓ — tap to change' : 'Upload your photo or salon photo'}</p></div>
+          <p>${regForm.photoUrl ? 'Foto yükləndi ✓' : 'Foto yükləyin'}</p></div>
         <img id="photo-preview-img" class="photo-preview" style="display:${regForm.photoUrl?'block':'none'}" src="${regForm.photoUrl||''}">
       </div>
       <div class="f2col">
-        <div class="fg"><label class="fl">Full name *</label><input class="ff" id="rf-name" placeholder="e.g. Anar Huseynov" value="${sanitize(regForm.name)}" maxlength="100"></div>
-        <div class="fg"><label class="fl">Salon name *</label><input class="ff" id="rf-salon" placeholder="e.g. Alpha Barbershop" value="${sanitize(regForm.salon)}" maxlength="100"></div>
+        <div class="fg"><label class="fl">Ad Soyad *</label><input class="ff" id="rf-name" placeholder="məs. Anar Hüseynov" value="${sanitize(regForm.name)}" maxlength="100"></div>
+        <div class="fg"><label class="fl">Salon adı *</label><input class="ff" id="rf-salon" placeholder="məs. Alpha Barbershop" value="${sanitize(regForm.salon)}" maxlength="100"></div>
       </div>
       <div class="f2col">
-        <div class="fg"><label class="fl">Email * (for login)</label><input class="ff" id="rf-email" placeholder="your@email.com" type="email" value="${sanitize(regForm.email)}" maxlength="200"></div>
-        <div class="fg"><label class="fl">Password * (min 6 chars)</label><input class="ff" id="rf-password" placeholder="Create a password" type="password" value="${regForm.password}" maxlength="100"></div>
+        <div class="fg"><label class="fl">Email * (giriş üçün)</label><input class="ff" id="rf-email" placeholder="your@email.com" type="email" value="${sanitize(regForm.email)}" maxlength="200"></div>
+        <div class="fg"><label class="fl">Şifrə * (min 6 simvol)</label><input class="ff" id="rf-password" placeholder="Şifrə yarat" type="password" value="${regForm.password}" maxlength="100"></div>
       </div>
-      <div class="fg"><label class="fl">City / District *</label><input class="ff" id="rf-city" placeholder="e.g. Baku, Narimanov district" value="${sanitize(regForm.city)}" maxlength="100"></div>
-      <div class="fg"><label class="fl">Phone number *</label><input class="ff" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${sanitize(regForm.phone)}" maxlength="20"></div>
-      <div class="fg"><label class="fl">Location / Address (for map)</label><input class="ff" id="rf-location" placeholder="e.g. Nizami Street 45, Baku" value="${sanitize(regForm.location)}" maxlength="200"></div>
-      <div class="fg"><label class="fl">Specialty</label><input class="ff" id="rf-specialty" placeholder="e.g. Fades, classic cuts, beard design" value="${sanitize(regForm.specialty)}" maxlength="100"></div>
-      <div class="fg"><label class="fl">About you (optional)</label><textarea class="ff" id="rf-about" rows="3" placeholder="Tell clients about your experience..." maxlength="500">${sanitize(regForm.about)}</textarea></div>
-      <button class="btn-main" onclick="saveProfileTab()">Save & continue →</button>
+      <div class="fg"><label class="fl">Şəhər / Rayon *</label><input class="ff" id="rf-city" placeholder="məs. Bakı, Nərimanov rayonu" value="${sanitize(regForm.city)}" maxlength="100"></div>
+      <div class="fg"><label class="fl">Telefon *</label><input class="ff" id="rf-phone" placeholder="+994 50 000 00 00" type="tel" value="${sanitize(regForm.phone)}" maxlength="20"></div>
+      <div class="fg"><label class="fl">Ünvan (xəritə üçün)</label><input class="ff" id="rf-location" placeholder="məs. Nizami küç. 45, Bakı" value="${sanitize(regForm.location)}" maxlength="200"></div>
+      <div class="fg"><label class="fl">İxtisas</label><input class="ff" id="rf-specialty" placeholder="məs. Feyds, klassik, saqqal" value="${sanitize(regForm.specialty)}" maxlength="100"></div>
+      <div class="fg"><label class="fl">Haqqımda (isteğe bağlı)</label><textarea class="ff" id="rf-about" rows="3" placeholder="Təcrübəniz haqqında danışın..." maxlength="500">${sanitize(regForm.about)}</textarea></div>
+      <button class="btn-main" onclick="saveProfileTab()">Saxla və davam et →</button>
     </div>`;
   } else if (tab==='schedule') {
     c.innerHTML=`<div class="card-box">
-      <div class="fg"><label class="fl">Working days</label><div class="days-wrap">${regDaysAll.map(d=>`<button class="day-tog ${activeDays.includes(d)?'on':''}" onclick="toggleDay('${d}',this)">${d}</button>`).join('')}</div></div>
+      <div class="fg"><label class="fl">İş günləri</label><div class="days-wrap">${regDaysAll.map(d=>`<button class="day-tog ${activeDays.includes(d)?'on':''}" onclick="toggleDay('${d}',this)">${d}</button>`).join('')}</div></div>
       <div class="f2col" style="margin-top:14px">
-        <div class="fg"><label class="fl">Opening time</label><select class="ff">${['08:00','09:00','10:00','11:00'].map(t=>`<option ${t==='10:00'?'selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Closing time</label><select class="ff">${['18:00','19:00','20:00','21:00','22:00'].map(t=>`<option ${t==='22:00'?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Açılış vaxtı</label><select class="ff" id="reg-start">${['08:00','09:00','10:00','11:00'].map(t=>`<option ${t==='10:00'?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Bağlanış vaxtı</label><select class="ff" id="reg-end">${['18:00','19:00','20:00','21:00','22:00'].map(t=>`<option ${t==='22:00'?'selected':''}>${t}</option>`).join('')}</select></div>
       </div>
-      <div class="fg"><label class="fl">Buffer between appointments</label><select class="ff"><option>0 min</option><option>5 min</option><option selected>10 min</option><option>15 min</option></select></div>
-      <p style="font-size:13px;color:var(--gray);margin-bottom:18px;line-height:1.6">System auto-generates 30-minute slots. Block specific dates from your dashboard.</p>
+      <div class="fg"><label class="fl">Görüşlər arası boşluq</label><select class="ff"><option>0 dəq</option><option>5 dəq</option><option selected>10 dəq</option><option>15 dəq</option></select></div>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:18px;line-height:1.6">Sistem 30 dəqiqəlik slotlar yaradır.</p>
       <div style="display:flex;gap:10px">
-        <button class="btn-sec" onclick="regTab('profile')">← Back</button>
-        <button class="btn-main" style="flex:1" onclick="regTab('services')">Save & continue →</button>
+        <button class="btn-sec" onclick="regTab('profile')">← Geri</button>
+        <button class="btn-main" style="flex:1" onclick="regTab('services')">Saxla və davam et →</button>
       </div>
     </div>`;
   } else if (tab==='services') {
     c.innerHTML=`<div class="card-box">
-      <p style="font-size:13px;color:var(--gray);margin-bottom:15px;line-height:1.6">Add every service you offer. Clients will see this when booking you.</p>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:15px;line-height:1.6">Təklif etdiyiniz bütün xidmətləri əlavə edin.</p>
       <div id="svc-list">${regServices.map((s,i)=>`<div class="svc-row">
-        <input class="ff" value="${sanitize(s.n)}" placeholder="Service name" onchange="regServices[${i}].n=this.value" style="flex:2" maxlength="100">
+        <input class="ff" value="${sanitize(s.n)}" placeholder="Xidmət adı" onchange="regServices[${i}].n=this.value" style="flex:2" maxlength="100">
         <input class="ff" value="${sanitize(s.p)}" placeholder="AZN" type="number" min="1" max="9999" onchange="regServices[${i}].p=this.value" style="flex:1">
         <button class="del-btn" onclick="regServices.splice(${i},1);regTab('services')">×</button>
       </div>`).join('')}</div>
-      <button class="add-svc-btn" onclick="regServices.push({n:'',p:''});regTab('services')">+ Add service</button>
+      <button class="add-svc-btn" onclick="regServices.push({n:'',p:''});regTab('services')">+ Xidmət əlavə et</button>
       <div style="display:flex;gap:10px">
-        <button class="btn-sec" onclick="regTab('schedule')">← Back</button>
-        <button class="btn-main" style="flex:1" onclick="regTab('payment')">Save & continue →</button>
+        <button class="btn-sec" onclick="regTab('schedule')">← Geri</button>
+        <button class="btn-main" style="flex:1" onclick="regTab('payment')">Saxla və davam et →</button>
       </div>
     </div>`;
   } else if (tab==='payment') {
     c.innerHTML=`<div class="card-box">
       <div class="plan-card">
-        <div class="plan-price">${SUBSCRIPTION_PRICE} AZN <span>/ month</span></div>
-        <p style="font-size:13px;color:var(--green-dark)">Monthly subscription · cancel anytime</p>
+        <div class="plan-price">${SUBSCRIPTION_PRICE} AZN <span>/ ay</span></div>
+        <p style="font-size:13px;color:var(--green-dark)">Aylıq abunəlik · istənilən vaxt ləğv edilə bilər</p>
         <ul class="plan-feats">
-          <li>Unlimited bookings</li>
-          <li>Real-time notifications</li>
-          <li>Your own dashboard with analytics</li>
-          <li>Top ranking in search results</li>
-          <li>Photo portfolio on your profile</li>
+          <li>Limitsiz sifarişlər</li>
+          <li>Telegram bildirişləri</li>
+          <li>Analitikali şəxsi kabinetiniz</li>
+          <li>Axtarışda yüksək sıralama</li>
+          <li>Profilinizdə foto portfolio</li>
         </ul>
       </div>
       <div class="contact-box">
-        After submitting, contact us to activate your account:<br><br>
+        Qeydiyyatdan sonra hesabınızı aktivləşdirmək üçün bizimlə əlaqə saxlayın:<br><br>
         <strong>WhatsApp: ${WHATSAPP_1}</strong><br>
         <strong>WhatsApp: ${WHATSAPP_2}</strong><br><br>
-        Your profile goes live within 24 hours of payment confirmation.
+        Ödəniş təsdiqləndikdən sonra 24 saat ərzində profiliniz aktiv olacaq.
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn-sec" onclick="regTab('services')">← Back</button>
-        <button class="btn-main green" style="flex:1" onclick="submitRegistration()">Submit registration</button>
+        <button class="btn-sec" onclick="regTab('services')">← Geri</button>
+        <button class="btn-main green" style="flex:1" onclick="submitRegistration()">Qeydiyyatı göndər</button>
       </div>
     </div>`;
   }
@@ -1504,29 +1819,20 @@ function regTab(tab) {
 
 async function previewPhoto(input) {
   const file=input.files[0]; if(!file) return;
-  if (file.size>5*1024*1024) { toast('Photo must be under 5MB'); return; }
-  // Show preview immediately using local URL
+  if (file.size>5*1024*1024) { toast('Foto 5MB-dan az olmalıdır'); return; }
   const localUrl = URL.createObjectURL(file);
   const img=document.getElementById('photo-preview-img');
   if(img){img.src=localUrl;img.style.display='block';}
-  // Also update the label
   const label=document.querySelector('.photo-upload p');
-  if(label) label.textContent='Uploading...';
-  // Upload to Supabase Storage
+  if(label) label.textContent='Yüklənir...';
   const fileExt=file.name.split('.').pop().toLowerCase();
   const fileName=`barber_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
   const { data, error } = await db.storage.from('photos').upload(fileName, file, { upsert:true, contentType:file.type });
-  if (error) {
-    toast('Photo upload failed: '+error.message);
-    if(label) label.textContent='Upload failed — tap to try again';
-    regForm.photoUrl='';
-    return;
-  }
-  // Get permanent public URL and save to regForm
+  if (error) { toast('Foto yüklənmədi: '+error.message); if(label) label.textContent='Yüklənmədi — yenidən cəhd edin'; regForm.photoUrl=''; return; }
   const { data:urlData } = db.storage.from('photos').getPublicUrl(fileName);
   regForm.photoUrl = urlData.publicUrl;
-  if(label) label.textContent='Photo uploaded ✓ — tap to change';
-  toast('Photo uploaded!');
+  if(label) label.textContent='Foto yükləndi ✓';
+  toast('Foto yükləndi!');
 }
 
 function saveProfileTab() {
@@ -1539,9 +1845,9 @@ function saveProfileTab() {
   regForm.location=sanitize(document.getElementById('rf-location')?.value.trim()||'',200);
   regForm.specialty=sanitize(document.getElementById('rf-specialty')?.value.trim()||'',100);
   regForm.about=sanitize(document.getElementById('rf-about')?.value.trim()||'',500);
-  if (!regForm.name||!regForm.salon||!regForm.city||!regForm.phone) { toast('Please fill in all required fields (*)'); return; }
-  if (!regForm.email||!validateEmail(regForm.email)) { toast('Please enter a valid email address'); return; }
-  if (!regForm.password||regForm.password.length<6) { toast('Password must be at least 6 characters'); return; }
+  if (!regForm.name||!regForm.salon||!regForm.city||!regForm.phone) { toast('Bütün məcburi sahələri (*) doldurun'); return; }
+  if (!regForm.email||!validateEmail(regForm.email)) { toast('Düzgün email daxil edin'); return; }
+  if (!regForm.password||regForm.password.length<6) { toast('Şifrə ən az 6 simvol olmalıdır'); return; }
   regTab('schedule');
 }
 
@@ -1553,95 +1859,101 @@ function toggleDay(d,btn) {
 
 async function submitRegistration() {
   const rl=checkRateLimit('register');
-  if (rl.blocked) { toast(`Too many attempts. Wait ${rl.waitMins} min.`); return; }
-  if (!regForm.name||!regForm.salon) { toast('Please complete your profile first'); regTab('profile'); return; }
+  if (rl.blocked) { toast(`Çox cəhd. ${rl.waitMins} dəq. gözləyin.`); return; }
+  if (!regForm.name||!regForm.salon) { toast('Əvvəlcə profilinizi tamamlayın'); regTab('profile'); return; }
   const btn=document.querySelector('#page-register .btn-main.green');
-  if(btn){btn.disabled=true;btn.textContent='Submitting...';}
-  // Create Supabase Auth account for barber login
-  const { data:authData, error:authErr } = await db.auth.signUp({
-    email: regForm.email,
-    password: regForm.password,
-    options: {
-      data: { name: regForm.name },
-      emailRedirectTo: null
+  if(btn){btn.disabled=true;btn.textContent='Göndərilir...';}
+  const { data:authData, error:authErr } = await db.auth.signUp({ email:regForm.email, password:regForm.password, options:{data:{name:regForm.name}} });
+  if (authErr && !authErr.message.includes('already registered') && !authErr.message.includes('User already registered')) {
+    if (authErr.message.includes('rate limit')) {
+      toast('Çox cəhd. Bir neçə dəqiqə gözləyin.');
+    } else {
+      toast('Hesab xətası: ' + authErr.message);
     }
-  });
-  if (authErr) {
-    if (authErr.message.includes('rate limit') || authErr.message.includes('Rate limit')) {
-      // Rate limited — account may already exist, try to sign in to verify
-      const { error:signInErr } = await db.auth.signInWithPassword({ email:regForm.email, password:regForm.password });
-      if (signInErr) {
-        toast('Too many attempts. Please wait a few minutes and try again.');
-        if(btn){btn.disabled=false;btn.textContent='Submit registration';}
-        return;
-      }
-      // Sign in worked — account exists, continue saving profile
-    } else if (!authErr.message.includes('already registered') && !authErr.message.includes('User already registered')) {
-      toast('Account error: ' + authErr.message);
-      if(btn){btn.disabled=false;btn.textContent='Submit registration';}
-      return;
-    }
-    // Email already registered — that's fine, continue saving profile
+    if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}
+    return;
   }
+  const startTime = document.getElementById('reg-start')?.value || '10:00';
+  const endTime = document.getElementById('reg-end')?.value || '22:00';
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
-  if (salonErr){toast('Salon error: ' + (salonErr.message||salonErr.code||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
-  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, email:regForm.email, specialty:regForm.specialty, work_days:activeDays, start_time:'10:00', end_time:'22:00', buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
-  if (barberErr){toast('Barber error: ' + (barberErr.message||barberErr.code||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Submit registration';}return;}
+  if (salonErr){toast('Salon xətası: '+(salonErr.message||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}return;}
+  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, email:regForm.email, specialty:regForm.specialty, work_days:activeDays, start_time:startTime, end_time:endTime, buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
+  if (barberErr){toast('Bərbər xətası: '+(barberErr.message||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
-  const photoStatus = regForm.photoUrl ? ' Your photo has been saved.' : '';
-  toast('Registration submitted! Contact us on WhatsApp to activate.' + photoStatus);
+  // Notify admin via Telegram
+  await sendTelegram(`🆕 <b>YENİ BƏRBƏR QEYDİYYATI</b>\n\nAd: ${regForm.name}\nSalon: ${regForm.salon}\nŞəhər: ${regForm.city}\nTelefon: ${regForm.phone}\nEmail: ${regForm.email}\n\nTəsdiq gözlənilir.`);
+  toast('Qeydiyyat göndərildi! Aktivləşdirmək üçün WhatsApp-da bizimlə əlaqə saxlayın.');
   regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'',email:'',password:''};
-  regServices=[{n:'Haircut',p:'10'}];
+  regServices=[{n:'Saç kəsimi',p:'10'}];
   activeDays=['Tue','Wed','Thu','Fri','Sat','Sun'];
   regTab('profile');
-  if(btn){btn.disabled=false;btn.textContent='Submit registration';}
+  if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}
 }
 
 // ── DASHBOARD ──
 async function loadDashboard() {
   if (!currentUser) { nav('login'); return; }
   const { data:barber } = await db.from('barbers').select('*,salons(name)').eq('email',currentUser.email).maybeSingle();
-  const targetBarber=barber||(await db.from('barbers').select('*').eq('status','active').limit(1)).data?.[0];
-  if (!targetBarber) { document.getElementById('dash-barber-name').textContent='No profile found'; return; }
+  if (!barber) { document.getElementById('dash-barber-name').textContent='Profil tapılmadı'; return; }
   const greetHour = new Date().getHours();
-  const greetText = greetHour < 12 ? 'Good morning' : greetHour < 17 ? 'Good afternoon' : 'Good evening';
-  const greetEl = document.getElementById('t-dash-greet');
-  if (greetEl) greetEl.textContent = greetText;
-  document.getElementById('dash-barber-name').textContent=sanitize(targetBarber.name);
-  document.getElementById('dash-status-badge').textContent=targetBarber.status==='active'?'Active':'Pending — contact us to activate';
-  document.getElementById('dash-status-badge').className='status-badge'+(targetBarber.status!=='active'?' inactive':'');
-  document.getElementById('dash-rating').textContent=targetBarber.rating?targetBarber.rating.toFixed(1):'—';
-  const today=new Date().toISOString().split('T')[0];
-  const {data:todayB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',targetBarber.id).eq('date',today).neq('status','cancelled').order('time');
-  const {data:allB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',targetBarber.id).order('date',{ascending:false}).limit(50);
+  const greetText = greetHour < 12 ? 'Sabahınız xeyir' : greetHour < 17 ? 'Günortanız xeyir' : 'Axşamınız xeyir';
+  document.getElementById('t-dash-greet').textContent = greetText;
+  document.getElementById('dash-barber-name').textContent=sanitize(barber.name);
+  document.getElementById('dash-status-badge').textContent=barber.status==='active'?'Aktiv':'Gözləyir — bizimlə əlaqə saxlayın';
+  document.getElementById('dash-status-badge').className='status-badge'+(barber.status!=='active'?' inactive':'');
+  document.getElementById('dash-rating').textContent=barber.rating?barber.rating.toFixed(1):'—';
+  // Use local date to avoid midnight bug
+  const today = getTodayLocal();
+  const now = new Date();
+  const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  // Today's bookings — use local date range to handle midnight crossing
+  const {data:todayB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',barber.id).eq('date',today).neq('status','cancelled').order('time');
+  const {data:allB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',barber.id).order('date',{ascending:false}).limit(100);
   const revenue=(allB||[]).filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.services?.price||0),0);
   document.getElementById('dash-today').textContent=todayB?.length||0;
   document.getElementById('dash-total').textContent=(allB||[]).filter(b=>b.status==='confirmed').length;
   document.getElementById('dash-revenue').textContent=revenue;
   const apptEl=document.getElementById('dash-appts');
-  apptEl.innerHTML=todayB?.length?todayB.map(b=>`<div class="appt-row">
-    <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.time} · ${sanitize(b.services?.name||'—')} · ${sanitize(b.client_phone)}</div></div>
-    <div class="appt-actions">
-      <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Cancelled':b.services?.price+' AZN'||'Confirmed'}</span>
-      ${b.status!=='cancelled'?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Cancel</button>`:''}
-    </div>
-  </div>`).join(''):'<div class="empty-state">No appointments today</div>';
+  apptEl.innerHTML=todayB?.length?todayB.map(b=>{
+    const isPast = b.time <= nowTime;
+    const label = isPast ? 'Keçdi' : 'Gəlir';
+    const labelClass = isPast ? 'passed' : 'upcoming';
+    return `<div class="appt-row">
+      <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.time} · ${sanitize(b.services?.name||'—')} · ${sanitize(b.client_phone)}</div></div>
+      <div class="appt-actions">
+        <span class="ab ${labelClass}">${label}</span>
+        <span class="ab" style="background:var(--gray-light);color:var(--gray)">${(b.services?.price||0)+' AZN'}</span>
+        ${!isPast?`<button class="cancel-btn" onclick="initCancelBooking('${b.id}')">Ləğv et</button>`:''}
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state">Bu gün görüş yoxdur</div>';
+  // Slot grid
   const bookedToday=(todayB||[]).map(b=>b.time);
-  document.getElementById('dash-slots').innerHTML=ALL_TIMES.slice(0,12).map(t=>`<div class="slot-mini ${bookedToday.includes(t)?'taken':'free'}">${t}</div>`).join('');
-  // Load and show real reviews
-  const {data:revs}=await db.from('reviews').select('*').eq('barber_id',targetBarber.id).order('created_at',{ascending:false}).limit(5);
+  const barberTimes = generateTimes(barber.start_time||'10:00', barber.end_time||'22:00', 30);
+  document.getElementById('dash-slots').innerHTML=barberTimes.slice(0,12).map(t=>`<div class="slot-mini ${bookedToday.includes(t)?'taken':'free'}">${t}</div>`).join('');
+  // Reviews
+  const {data:revs}=await db.from('reviews').select('*').eq('barber_id',barber.id).order('created_at',{ascending:false}).limit(5);
   const revEl=document.getElementById('dash-reviews');
   revEl.innerHTML=revs?.length?revs.map(r=>`<div class="review-item">
     <div class="review-header"><span class="review-author">${sanitize(r.client_name)}</span><span class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span></div>
     ${r.comment?`<div class="review-text">${sanitize(r.comment,300)}</div>`:''}
     <div style="font-size:11px;color:#bbb;margin-top:3px">${r.created_at?.split('T')[0]||''}</div>
-  </div>`).join(''):'<div class="empty-state">No reviews yet</div>';
+  </div>`).join(''):'<div class="empty-state">Hələ rəy yoxdur</div>';
+  // All bookings with Passed/Upcoming labels
   const allEl=document.getElementById('dash-all-bookings');
-  allEl.innerHTML=allB?.length?allB.map(b=>`<div class="appt-row">
-    <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.date} · ${b.time} · ${sanitize(b.client_phone)}</div></div>
-    <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Cancelled':(b.services?.price||0)+' AZN'}</span>
-  </div>`).join(''):'<div class="empty-state">No bookings yet</div>';
+  allEl.innerHTML=allB?.length?allB.map(b=>{
+    const isPast = b.date < today || (b.date === today && b.time <= nowTime);
+    const statusLabel = b.status==='cancelled' ? 'Ləğv edildi' : isPast ? 'Keçdi' : 'Gəlir';
+    const statusClass = b.status==='cancelled' ? 'cancelled' : isPast ? 'passed' : 'upcoming';
+    return `<div class="appt-row">
+      <div><div class="appt-client">${sanitize(b.client_name)}</div><div class="appt-time">${b.date} · ${b.time} · ${sanitize(b.client_phone)}</div></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="ab ${statusClass}">${statusLabel}</span>
+        <span class="ab" style="background:var(--gray-light);color:var(--gray)">${(b.services?.price||0)+' AZN'}</span>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state">Hələ sifariş yoxdur</div>';
   await loadDashPortfolio();
 }
 
@@ -1672,86 +1984,76 @@ function renderAdmin() {
   });
   const t=document.getElementById('admin-table');
   if(!t)return;
-  if(list.length===0){t.innerHTML='<div class="empty-state">No barbers found</div>';return;}
+  if(list.length===0){t.innerHTML='<div class="empty-state">Bərbər tapılmadı</div>';return;}
   t.innerHTML=list.map(b=>`<div class="admin-row">
     <div class="admin-row-info">
       <h4>${sanitize(b.name)}</h4>
-      <p>${sanitize(b.salons?.name||'—')} · ${sanitize(b.salons?.city||'—')} · Joined ${b.created_at?.split('T')[0]||'—'} · Phone: ${sanitize(b.phone||'—')}</p>
+      <p>${sanitize(b.salons?.name||'—')} · ${sanitize(b.salons?.city||'—')} · ${b.created_at?.split('T')[0]||'—'} · ${sanitize(b.phone||'—')}</p>
     </div>
     <div class="admin-actions">
-      <span class="sp ${b.status}">${b.status.charAt(0).toUpperCase()+b.status.slice(1)}</span>
-      ${b.status==='pending'?`<button class="btn-approve" onclick="adminApprove('${b.id}','${b.salon_id}')">Approve</button>`:''}
-      ${b.status==='active'?`<button class="btn-suspend" onclick="adminSuspend('${b.id}','${b.salon_id}')">Suspend</button>`:''}
-      ${b.status!=='deleted'?`<button class="btn-delete" onclick="showDelModal('${b.id}','${sanitize(b.name)}')">Delete</button>`:`<button class="btn-restore" onclick="adminRestore('${b.id}','${b.salon_id}')">Restore</button>`}
+      <span class="sp ${b.status}">${b.status==='active'?'Aktiv':b.status==='pending'?'Gözləyir':'Silinmiş'}</span>
+      ${b.status==='pending'?`<button class="btn-approve" onclick="adminApprove('${b.id}','${b.salon_id}')">Təsdiqlə</button>`:''}
+      ${b.status==='active'?`<button class="btn-suspend" onclick="adminSuspend('${b.id}','${b.salon_id}')">Gözlət</button>`:''}
+      ${b.status!=='deleted'?`<button class="btn-delete" onclick="showDelModal('${b.id}','${sanitize(b.name)}')">Sil</button>`:`<button class="btn-restore" onclick="adminRestore('${b.id}','${b.salon_id}')">Bərpa et</button>`}
     </div>
   </div>`).join('');
 }
 
-async function adminApprove(bid,sid){await db.from('barbers').update({status:'active'}).eq('id',bid);await db.from('salons').update({status:'active'}).eq('id',sid);toast('Barber approved and live!');loadAdmin();}
-async function adminSuspend(bid,sid){await db.from('barbers').update({status:'pending'}).eq('id',bid);await db.from('salons').update({status:'pending'}).eq('id',sid);toast('Barber suspended.');loadAdmin();}
-async function adminRestore(bid,sid){await db.from('barbers').update({status:'active'}).eq('id',bid);await db.from('salons').update({status:'active'}).eq('id',sid);toast('Barber restored!');loadAdmin();}
-function showDelModal(id,name){deleteTargetId=id;document.getElementById('del-title').textContent=`Delete ${name}?`;openModal('delete-modal');}
-async function doDelete(){await db.from('barbers').update({status:'deleted'}).eq('id',deleteTargetId);closeModal('delete-modal');toast('Barber deleted.');loadAdmin();}
+async function adminApprove(bid,sid){await db.from('barbers').update({status:'active'}).eq('id',bid);await db.from('salons').update({status:'active'}).eq('id',sid);toast('Bərbər təsdiqləndi!');loadAdmin();}
+async function adminSuspend(bid,sid){await db.from('barbers').update({status:'pending'}).eq('id',bid);await db.from('salons').update({status:'pending'}).eq('id',sid);toast('Bərbər gözlətildi.');loadAdmin();}
+async function adminRestore(bid,sid){await db.from('barbers').update({status:'active'}).eq('id',bid);await db.from('salons').update({status:'active'}).eq('id',sid);toast('Bərbər bərpa edildi!');loadAdmin();}
+function showDelModal(id,name){deleteTargetId=id;document.getElementById('del-title').textContent=`${name} silinsin?`;openModal('delete-modal');}
+async function doDelete(){await db.from('barbers').update({status:'deleted'}).eq('id',deleteTargetId);closeModal('delete-modal');toast('Bərbər silindi.');loadAdmin();}
 
 // ── BARBER PROFILE PAGE ──
 let currentProfileBarber = null;
 
 async function openBarberProfile(barberId) {
   nav('profile');
-  applyDynamicTranslations();
-  // Load barber data
-  const { data:barber } = await db.from('barbers')
-    .select('*, salons(name,city)')
-    .eq('id', barberId).single();
-  if (!barber) { toast('Could not load barber profile'); nav('barbers'); return; }
+  const { data:barber } = await db.from('barbers').select('*, salons(name,city)').eq('id', barberId).single();
+  if (!barber) { toast('Profil tapılmadı'); nav('barbers'); return; }
   currentProfileBarber = barber;
-  // Set photo
   const photoEl = document.getElementById('pp-photo');
   if (barber.photo_url) {
     photoEl.innerHTML = `<img src="${barber.photo_url}" alt="${sanitize(barber.name)}">`;
   } else {
     photoEl.textContent = barber.name[0];
   }
-  // Set info
   document.getElementById('pp-name').textContent = sanitize(barber.name);
-  document.getElementById('pp-salon').textContent = sanitize(barber.salons?.name || 'Independent');
-  document.getElementById('pp-specialty').textContent = sanitize(barber.specialty || 'All styles') + ' · ' + sanitize(barber.salons?.city || 'Baku');
-  document.getElementById('pp-rating').textContent = barber.rating > 0 ? barber.rating.toFixed(1) + '★' : 'New';
+  document.getElementById('pp-salon').textContent = sanitize(barber.salons?.name || 'Müstəqil');
+  document.getElementById('pp-specialty').textContent = sanitize(barber.specialty || 'Bütün stillər') + ' · ' + sanitize(barber.salons?.city || 'Bakı');
+  document.getElementById('pp-rating').textContent = barber.rating > 0 ? barber.rating.toFixed(1) + '★' : 'Yeni';
   document.getElementById('pp-reviews').textContent = barber.review_count || 0;
-  // Hours
   const days = (barber.work_days || []).join(', ');
   document.getElementById('pp-hours').textContent = `${days} · ${barber.start_time || '10:00'} – ${barber.end_time || '22:00'}`;
-  // Location
   if (barber.location) {
     const locRow = document.getElementById('pp-location-row');
     locRow.style.display = 'flex';
     document.getElementById('pp-map-link').href = `https://www.google.com/maps/search/${encodeURIComponent(barber.location + ' Baku')}`;
     document.getElementById('pp-map-link').textContent = sanitize(barber.location);
   }
-  // About
   if (barber.about) {
     const aboutEl = document.getElementById('pp-about');
     aboutEl.style.display = 'block';
     aboutEl.textContent = sanitize(barber.about, 500);
   }
-  // Load bookings count
   const { count } = await db.from('bookings').select('id', {count:'exact'}).eq('barber_id', barberId).eq('status','confirmed');
   document.getElementById('pp-bookings').textContent = count || 0;
-  // Load portfolio
+  // Favorites button
+  const favBtn = document.getElementById('pp-fav-btn');
+  const isFav = isFavorite(barberId);
+  favBtn.textContent = isFav ? '★' : '☆';
+  favBtn.style.color = isFav ? 'var(--gold)' : '';
   loadPortfolio(barberId);
-  // Load reviews
   loadProfileReviews(barberId);
 }
 
 async function loadPortfolio(barberId) {
   const grid = document.getElementById('pp-portfolio');
   const { data:photos } = await db.from('portfolio').select('*').eq('barber_id', barberId).order('created_at', {ascending:false});
-  if (!photos || photos.length === 0) {
-    grid.innerHTML = '<div class="portfolio-empty">No portfolio photos yet</div>';
-    return;
-  }
+  if (!photos || photos.length === 0) { grid.innerHTML = '<div class="portfolio-empty">Hələ portfolio şəkli yoxdur</div>'; return; }
   grid.innerHTML = photos.map(p => `<div class="portfolio-item" onclick="openLightbox('${p.photo_url}')">
-    <img src="${p.photo_url}" alt="${sanitize(p.caption||'Work photo')}" loading="lazy">
+    <img src="${p.photo_url}" alt="${sanitize(p.caption||'İş fotosu')}" loading="lazy">
   </div>`).join('');
 }
 
@@ -1759,12 +2061,11 @@ async function loadProfileReviews(barberId) {
   const { data:reviews } = await db.from('reviews').select('*').eq('barber_id', barberId).order('created_at', {ascending:false}).limit(10);
   const el = document.getElementById('pp-reviews-list');
   if (!reviews || reviews.length === 0) {
-    el.innerHTML = `<div class="empty-state" style="margin-bottom:16px">No reviews yet — be the first!</div>
-    <button class="btn-main green" style="max-width:260px;margin:0 auto;display:block" onclick="showReviewForm('${barberId}')">Leave a review</button>`;
+    el.innerHTML = `<div class="empty-state" style="margin-bottom:16px">Hələ rəy yoxdur — ilk siz olun!</div>
+    <button class="btn-main green" style="max-width:260px;margin:0 auto;display:block" onclick="showReviewForm('${barberId}')">Rəy buraxın</button>`;
     return;
   }
-  // Add leave review button at top
-  el.innerHTML = `<button class="btn-main green" style="max-width:260px;margin-bottom:16px;display:block" onclick="showReviewForm('${barberId}')">Leave a review</button>`;
+  el.innerHTML = `<button class="btn-main green" style="max-width:260px;margin-bottom:16px;display:block" onclick="showReviewForm('${barberId}')">Rəy buraxın</button>`;
   el.innerHTML += reviews.map(r => `<div class="review-card">
     <div class="review-card-header">
       <span class="review-card-author">${sanitize(r.client_name)}</span>
@@ -1786,31 +2087,30 @@ function openLightbox(url) {
 }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
 
-// ── PORTFOLIO UPLOAD (from dashboard) ──
-let portfolioUploads = []; // {url, id} of uploaded photos
+// ── PORTFOLIO UPLOAD ──
+let portfolioUploads = [];
 
 async function uploadPortfolioPhoto(input) {
   const file = input.files[0]; if (!file) return;
-  if (file.size > 5*1024*1024) { toast('Photo must be under 5MB'); return; }
-  toast('Uploading...');
+  if (file.size > 5*1024*1024) { toast('Foto 5MB-dan az olmalıdır'); return; }
+  toast('Yüklənir...');
   const fileName = `portfolio_${Date.now()}.${file.name.split('.').pop()}`;
   const { error } = await db.storage.from('photos').upload(fileName, file, { upsert:true, contentType:file.type });
-  if (error) { toast('Upload failed: ' + error.message); return; }
+  if (error) { toast('Yüklənmədi: ' + error.message); return; }
   const { data:urlData } = db.storage.from('photos').getPublicUrl(fileName);
   const photoUrl = urlData.publicUrl;
-  // Save to portfolio table
   if (currentBarberProfile) {
     const { data:p } = await db.from('portfolio').insert({ barber_id:currentBarberProfile.id, photo_url:photoUrl }).select().single();
     if (p) portfolioUploads.push({url:photoUrl, id:p.id});
   }
-  toast('Photo added to portfolio!');
+  toast('Foto portfolioya əlavə edildi!');
   renderDashPortfolio();
 }
 
 async function deletePortfolioPhoto(photoId) {
   await db.from('portfolio').delete().eq('id', photoId);
   portfolioUploads = portfolioUploads.filter(p => p.id !== photoId);
-  toast('Photo removed.');
+  toast('Foto silindi.');
   renderDashPortfolio();
 }
 
@@ -1824,7 +2124,7 @@ function renderDashPortfolio() {
   el.innerHTML = thumbs + `<label class="add-portfolio-btn">
     <input type="file" accept="image/*" onchange="uploadPortfolioPhoto(this)">
     <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Add photo
+    Foto əlavə et
   </label>`;
 }
 
@@ -1855,16 +2155,105 @@ function checkAdminHash(){
   }
 }
 
+// ── PWA ──
+function setupPWA() {
+  // Create manifest dynamically
+  const manifest = {
+    name: 'Kavro.Club',
+    short_name: 'Kavro',
+    description: 'Bakıda bərbər tap və sifariş et',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#fafaf8',
+    theme_color: '#1a9e6e',
+    icons: [{
+      src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>",
+      sizes: '192x192',
+      type: 'image/svg+xml'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest-link').href = url;
+
+  // Register service worker for offline capability
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'kavro-v3';
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/index.html'])));
+      });
+      self.addEventListener('fetch', e => {
+        if (e.request.method !== 'GET') return;
+        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+      });
+    `;
+    const swBlob = new Blob([swCode], {type:'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+
+  // PWA install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    pwaPrompt = e;
+    const dismissed = localStorage.getItem('kavro_pwa_dismissed');
+    if (!dismissed) {
+      setTimeout(() => document.getElementById('pwa-banner').classList.add('show'), 3000);
+    }
+  });
+}
+
+function installPWA() {
+  if (pwaPrompt) {
+    pwaPrompt.prompt();
+    pwaPrompt.userChoice.then(() => { pwaPrompt = null; dismissPWA(); });
+  }
+}
+
+function dismissPWA() {
+  document.getElementById('pwa-banner').classList.remove('show');
+  try { localStorage.setItem('kavro_pwa_dismissed', '1'); } catch(e) {}
+}
+
 // ── INIT ──
 (async function init(){
+  setupPWA();
+
+  // Restore language preference
+  try {
+    const savedLang = sessionStorage.getItem('kavro_lang');
+    if (savedLang && T[savedLang]) {
+      currentLang = savedLang;
+      // Update lang button UI
+      document.querySelectorAll('.lang-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent === savedLang.toUpperCase());
+      });
+    }
+  } catch(e) {}
+
   await checkAuth();
   loadHomeStats();
   checkAdminHash();
   showLoginTab('login');
   regTab('profile');
+
+  // Restore page state after refresh
+  const { page, state } = loadNavState();
+  if (page && page !== 'home' && document.getElementById('page-'+page)) {
+    if (page === 'booking' && state?.barberId) {
+      bState = { barberId:state.barberId, barber:state.barberName, salonName:state.salonName, services:[], time:null, date:0, step:0 };
+      nav('booking');
+      await renderBooking();
+    } else if (page === 'dashboard' && currentUser) {
+      nav('dashboard');
+    } else if (['barbers','register','login','privacy','terms','lookup'].includes(page)) {
+      nav(page);
+    }
+  }
 })();
 
-window.addEventListener('hashchange',checkAdminHash);
+window.addEventListener('hashchange', checkAdminHash);
 </script>
 </body>
 </html>
