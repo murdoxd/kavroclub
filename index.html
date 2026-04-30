@@ -1475,28 +1475,27 @@ async function renderBooking() {
     const { data:services } = await db.from('services').select('*').eq('barber_id',bState.barberId).order('price');
     if (!services||services.length===0) { c.innerHTML='<div class="empty-state">Hələ xidmət əlavə edilməyib.</div>'; return; }
     const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
-    const continueBtn = bState.services.length>0
-      ? `<button class="btn-main green" style="margin-top:16px" onclick="bState.step=1;renderBooking()">Davam et — ${totalPrice} AZN →</button>`
-      : `<button class="btn-main" style="margin-top:16px;opacity:0.4;cursor:not-allowed" disabled>Ən az bir xidmət seçin</button>`;
-    // Show summary if services selected
-    const summary = bState.services.length > 0
-      ? `<div style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px">
+    const summaryHtml = bState.services.length > 0
+      ? `<div id="svc-summary" style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px">
           <strong>Seçildi:</strong> ${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join(' + ')} = <strong>${totalPrice} AZN</strong>
-        </div>` : '';
+        </div>`
+      : `<div id="svc-summary" style="display:none;background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px"></div>`;
+    const continueDisabled = bState.services.length === 0;
+    const continueBtnHtml = `<button id="svc-continue" class="btn-main ${continueDisabled?'':'green'}" style="margin-top:16px" ${continueDisabled?'disabled':''} onclick="if(bState.services.length>0){bState.step=1;renderBooking();}">${continueDisabled ? 'Ən az bir xidmət seçin' : 'Davam et — '+totalPrice+' AZN →'}</button>`;
     c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Xidmət seçin (birdən çox ola bilər)</div>`+
-      summary+
+      summaryHtml+
       services.map(sv=>{
         const isSelected = bState.services.some(s=>s.id===sv.id);
-        return `<div class="svc-opt ${isSelected?'sel':''}" onclick="toggleService('${sv.id}','${sanitize(sv.name)}',${sv.price})">
+        return `<div class="svc-opt ${isSelected?'sel':''}" data-id="${sv.id}" onclick="toggleService('${sv.id}','${sanitize(sv.name)}',${sv.price})">
           <div><div class="svc-nm">${sanitize(sv.name)}</div></div>
           <div style="display:flex;align-items:center;gap:10px">
             <div class="svc-pr">${sv.price} AZN</div>
-            <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${isSelected?'var(--green)':'var(--gray-border)'};background:${isSelected?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <div class="svc-check" style="width:20px;height:20px;border-radius:50%;border:2px solid ${isSelected?'var(--green)':'var(--gray-border)'};background:${isSelected?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;pointer-events:none">
               ${isSelected?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>':''}
             </div>
           </div>
         </div>`;
-      }).join('')+continueBtn;
+      }).join('')+continueBtnHtml;
   } else if (bState.step===1) {
     const freshDates = getNextDates();
     const dateStr = freshDates[bState.date].full;
@@ -1573,7 +1572,41 @@ function toggleService(id,name,price){
   const idx = bState.services.findIndex(s=>s.id===id);
   if(idx>-1){ bState.services.splice(idx,1); }
   else { bState.services.push({id,name,price}); }
-  renderBooking();
+  // Update UI without full re-render to preserve state
+  const opt = document.querySelector(`.svc-opt[data-id="${id}"]`);
+  const isNowSelected = bState.services.some(s=>s.id===id);
+  if(opt){
+    opt.classList.toggle('sel', isNowSelected);
+    const check = opt.querySelector('.svc-check');
+    if(check){
+      check.style.borderColor = isNowSelected ? 'var(--green)' : 'var(--gray-border)';
+      check.style.background = isNowSelected ? 'var(--green)' : 'transparent';
+      check.innerHTML = isNowSelected ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>' : '';
+    }
+  }
+  // Update summary and continue button
+  const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
+  const summaryEl = document.getElementById('svc-summary');
+  if(summaryEl){
+    if(bState.services.length > 0){
+      summaryEl.style.display='block';
+      summaryEl.innerHTML = `<strong>Seçildi:</strong> ${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join(' + ')} = <strong>${totalPrice} AZN</strong>`;
+    } else {
+      summaryEl.style.display='none';
+    }
+  }
+  const continueEl = document.getElementById('svc-continue');
+  if(continueEl){
+    if(bState.services.length > 0){
+      continueEl.disabled = false;
+      continueEl.textContent = `Davam et — ${totalPrice} AZN →`;
+      continueEl.className = 'btn-main green';
+    } else {
+      continueEl.disabled = true;
+      continueEl.textContent = 'Ən az bir xidmət seçin';
+      continueEl.className = 'btn-main';
+    }
+  }
 }
 function pickTime(t){bState.time=t;bState.step=2;renderBooking();}
 
