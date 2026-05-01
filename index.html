@@ -2257,7 +2257,7 @@ async function loadDashboard() {
   // Today's bookings — use local date range to handle midnight crossing
   const {data:todayB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',barber.id).eq('date',today).neq('status','cancelled').order('time');
   const {data:allB}=await db.from('bookings').select('*,services(name,price)').eq('barber_id',barber.id).order('date',{ascending:false}).limit(100);
-  const revenue=(allB||[]).filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.services?.price||0),0);
+  const revenue=(allB||[]).filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.total_price||b.services?.price||0),0);
   document.getElementById('dash-today').textContent=todayB?.length||0;
   document.getElementById('dash-total').textContent=(allB||[]).filter(b=>b.status==='confirmed').length;
   document.getElementById('dash-revenue').textContent=revenue;
