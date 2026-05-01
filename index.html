@@ -556,7 +556,7 @@ textarea.ff{resize:vertical;min-height:80px}
     <button class="nav-btn active" id="nb-home" onclick="nav('home')">Ana səhifə</button>
     <button class="nav-btn" id="nb-barbers" onclick="nav('barbers')">Bərbərlər</button>
     <button class="nav-btn" id="nb-register" onclick="nav('register')">Bərbərlər üçün</button>
-    <button class="nav-btn" id="nb-login" onclick="nav('login')">Giriş</button>
+    <button class="nav-btn" id="nb-login" onclick="nav('login')">Bərbər girişi</button>
     <button class="nav-btn" id="nb-dashboard" style="display:none" onclick="nav('dashboard')">Kabinetim</button>
   </div>
   <div class="topbar-right">
@@ -578,9 +578,9 @@ textarea.ff{resize:vertical;min-height:80px}
   <button class="mobile-nav-btn" onclick="nav('home');closeMobileNav()">Ana səhifə</button>
   <button class="mobile-nav-btn" onclick="nav('barbers');closeMobileNav()">Bərbərlər</button>
   <button class="mobile-nav-btn" id="mob-register-btn" onclick="nav('register');closeMobileNav()">Bərbərlər üçün</button>
-  <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Giriş</button>
+  <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Bərbər girişi</button>
+  <button class="mobile-nav-btn" onclick="nav('clientlookup');closeMobileNav()">Sifarişimi tap</button>
   <button class="mobile-nav-btn" id="mob-dash-btn" style="display:none" onclick="nav('dashboard');closeMobileNav()">Kabinetim</button>
-  <button class="mobile-nav-btn" id="mob-lookup-btn" onclick="nav('lookup');closeMobileNav()">Sifarişimi tap</button>
   <button class="mobile-nav-btn" id="mob-logout-btn" style="display:none;color:var(--red)" onclick="logout();closeMobileNav()">Çıxış</button>
 </div>
 
@@ -592,7 +592,10 @@ textarea.ff{resize:vertical;min-height:80px}
     <p id="t-hero-p">Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.</p>
     <div class="hero-btns">
       <button class="btn-hero-main" onclick="nav('barbers')" id="t-browse-btn">Bərbərlərə bax</button>
-      <button class="btn-hero-sec" onclick="nav('register')" id="t-barber-btn">Mən bərbərəm</button>
+      <button class="btn-hero-sec" onclick="nav('clientlookup')" id="t-barber-btn">Sifarişimi tap</button>
+    </div>
+    <div style="text-align:center;margin-bottom:12px">
+      <button onclick="nav('register')" style="background:transparent;color:rgba(255,255,255,0.5);border:none;font-size:13px;cursor:pointer;text-decoration:underline" id="t-barber-btn-small">Bərbərsiniz? Qeydiyyat / Giriş</button>
     </div>
     <div class="urgent-wrap">
       <button class="urgent-btn" onclick="openModal('urgent-modal')">
@@ -621,7 +624,6 @@ textarea.ff{resize:vertical;min-height:80px}
   <div class="footer-links">
     <button class="footer-link" onclick="nav('privacy')">Məxfilik Siyasəti</button>
     <button class="footer-link" onclick="nav('terms')">İstifadə Şərtləri</button>
-    <button class="footer-link" onclick="nav('lookup')">Sifarişimi tap</button>
   </div>
 </div>
 
@@ -722,7 +724,7 @@ textarea.ff{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<!-- LOGIN -->
+<!-- BARBER LOGIN -->
 <div class="page" id="page-login">
   <div class="login-layout">
     <h2 class="login-title" id="t-login-h">Bərbər girişi</h2>
@@ -732,6 +734,30 @@ textarea.ff{resize:vertical;min-height:80px}
       <button class="ltab" id="lt-signup" onclick="showLoginTab('signup')">Hesab yarat</button>
     </div>
     <div id="login-content"></div>
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--gray-border);text-align:center">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Müştərisiniz? Sifarişinizi axtarın və ya ləğv edin</p>
+      <button class="btn-sec" style="width:100%" onclick="nav('lookup')">Sifarişimi tap →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT LOOKUP PAGE -->
+<div class="page" id="page-clientlookup">
+  <div class="login-layout">
+    <button class="back-link" onclick="nav('home')" style="margin-bottom:24px">
+      <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      Ana səhifəyə qayıt
+    </button>
+    <h2 class="login-title">Sifarişimi tap</h2>
+    <p class="login-sub">Telefon nömrənizi daxil edin — bütün sifarişləriniz görünəcək</p>
+    <div class="card-box">
+      <div class="fg">
+        <label class="fl">Telefon nömrəniz</label>
+        <input class="ff" id="clientlookup-phone" placeholder="+994 50 000 00 00" type="tel" maxlength="20" onkeydown="if(event.key==='Enter')lookupClientBookings()">
+      </div>
+      <button class="btn-main green" onclick="lookupClientBookings()">Sifarişlərimi axtar</button>
+      <div id="clientlookup-results" style="margin-top:18px"></div>
+    </div>
   </div>
 </div>
 
@@ -770,6 +796,21 @@ textarea.ff{resize:vertical;min-height:80px}
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Foto əlavə et</label>
       </div>
+    </div></div>
+    <div style="margin-top:20px"><div class="dash-card">
+      <h3>📱 Telegram bildirişləri</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">
+        Telegram ID-nizi daxil edin — yeni sifariş və ləğvetmələr birbaşa sizə gəlsin.<br>
+        <strong style="color:var(--black)">ID almaq üçün:</strong> Telegram-da <strong>@userinfobot</strong>-a yazın, o sizə ID nömrənizi göndərəcək.
+      </p>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div class="fg" style="flex:1;margin-bottom:0">
+          <label class="fl">Telegram ID</label>
+          <input class="ff" id="dash-telegram-id" placeholder="məs. 123456789" maxlength="50" type="number">
+        </div>
+        <button class="btn-main green" style="width:auto;padding:11px 20px;white-space:nowrap" onclick="saveTelegramId()">Saxla</button>
+      </div>
+      <div id="dash-telegram-status" style="font-size:12px;color:var(--gray);margin-top:8px"></div>
     </div></div>
   </div>
 </div>
@@ -1089,7 +1130,7 @@ const T = {
     'hero-tag':'İndi Bakıda, Azərbaycanda',
     'hero-h1':'Növbəti saç kəsiminə<br><em>saniyələrdə</em> yazıl',
     'hero-p':'Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.',
-    'browse-btn':'Bərbərlərə bax','barber-btn':'Mən bərbərəm',
+    'browse-btn':'Bərbərlərə bax','barber-btn':'Sifarişimi tap',
     'urgent-text':'İndi dərhal bərbər lazımdır',
     'urgent-title':'İndi bərbər lazımdır','urgent-desc':'Bu gün ən erkən boş slotu tapacağıq.',
     'stat1':'Aktiv bərbərlər','stat2':'Sifarişlər','stat3':'Orta reytinq',
@@ -1181,7 +1222,7 @@ const T = {
     'hero-tag':'Теперь в Баку, Азербайджан',
     'hero-h1':'Запишитесь на стрижку<br>за <em>секунды</em>',
     'hero-p':'Найдите проверенных барберов рядом, выберите время и приходите.',
-    'browse-btn':'Смотреть барберов','barber-btn':'Я барбер',
+    'browse-btn':'Смотреть барберов','barber-btn':'Найти запись',
     'urgent-text':'Мне нужна стрижка прямо сейчас',
     'urgent-title':'Нужна стрижка сейчас','urgent-desc':'Найдём ближайший доступный слот сегодня.',
     'stat1':'Активных барберов','stat2':'Записей сделано','stat3':'Средний рейтинг',
@@ -1266,7 +1307,7 @@ const T = {
     'hero-tag':'Now in Baku, Azerbaijan',
     'hero-h1':'Book your next cut<br>in <em>seconds</em>',
     'hero-p':'Find verified barbers near you, pick a time, and show up.',
-    'browse-btn':'Browse barbers','barber-btn':"I'm a barber",
+    'browse-btn':'Browse barbers','barber-btn':'Find my booking',
     'urgent-text':'I need a cut right now',
     'urgent-title':'I need a cut right now','urgent-desc':"We'll find the earliest available slot today.",
     'stat1':'Active barbers','stat2':'Bookings made','stat3':'Average rating',
@@ -1530,6 +1571,7 @@ function nav(page) {
   if (page==='dashboard') loadDashboard();
   if (page==='register') regTab('profile');
   if (page==='login') showLoginTab('login');
+  if (page==='lookup') { nav('clientlookup'); return; }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
@@ -1558,6 +1600,8 @@ function showLoggedInUI() {
   const name = currentBarberProfile?.name || currentUser.email.split('@')[0];
   document.getElementById('nb-login').style.display='none';
   document.getElementById('nb-register').style.display='none'; // hide "For barbers" when logged in
+  const barbSmall = document.getElementById('t-barber-btn-small');
+  if (barbSmall) barbSmall.style.display='none';
   document.getElementById('nb-dashboard').style.display='inline-flex';
   document.getElementById('user-pill-btn').style.display='flex';
   document.getElementById('user-pill-name').textContent=name;
@@ -1570,6 +1614,8 @@ function showLoggedInUI() {
 function showLoggedOutUI() {
   document.getElementById('nb-login').style.display='inline-flex';
   document.getElementById('nb-register').style.display='inline-flex';
+  const barbSmallOut = document.getElementById('t-barber-btn-small');
+  if (barbSmallOut) barbSmallOut.style.display='';
   document.getElementById('nb-dashboard').style.display='none';
   document.getElementById('user-pill-btn').style.display='none';
   document.getElementById('mob-login-btn').style.display='block';
@@ -1954,7 +2000,11 @@ async function confirmBooking() {
     time: bState.time,
     totalPrice: totalPrice
   });
-  await sendTelegramTo(notifChatId, msg);
+  // Always notify admin, and also notify barber if they have their own telegram
+  await sendTelegramTo(TELEGRAM_CHAT_ID, msg);
+  if (barberForNotif?.telegram_chat_id && barberForNotif.telegram_chat_id !== TELEGRAM_CHAT_ID) {
+    await sendTelegramTo(barberForNotif.telegram_chat_id, msg);
+  }
   bState.step=3; renderBooking();
 }
 
@@ -2016,11 +2066,16 @@ async function doCancelBooking() {
   // Send to barber's telegram or admin fallback
   const { data:barberNotif } = await db.from('barbers').select('telegram_chat_id').eq('id', booking?.barber_id||'').maybeSingle();
   const cancelChatId = barberNotif?.telegram_chat_id || TELEGRAM_CHAT_ID;
-  await sendTelegramTo(cancelChatId, msg);
+  // Always notify admin, and also notify barber if they have telegram
+  await sendTelegramTo(TELEGRAM_CHAT_ID, msg);
+  if (barberNotif?.telegram_chat_id && barberNotif.telegram_chat_id !== TELEGRAM_CHAT_ID) {
+    await sendTelegramTo(barberNotif.telegram_chat_id, msg);
+  }
   // Refresh if on dashboard
   if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
   // Refresh if on lookup
   if (document.getElementById('page-lookup').classList.contains('active')) lookupBookings();
+  if (document.getElementById('page-clientlookup').classList.contains('active')) lookupClientBookings();
   cancelTargetId = null;
   cancelBookingData = null;
 }
@@ -2302,6 +2357,17 @@ async function loadDashboard() {
     </div>`;
   }).join(''):'<div class="empty-state">Hələ sifariş yoxdur</div>';
   await loadDashPortfolio();
+  // Load existing Telegram ID into field
+  const tgField = document.getElementById('dash-telegram-id');
+  const tgStatus = document.getElementById('dash-telegram-status');
+  if (tgField) {
+    tgField.value = barber.telegram_chat_id || '';
+    if (barber.telegram_chat_id && tgStatus) {
+      tgStatus.innerHTML = '✅ Telegram aktiv — bildirişlər sizə gəlir.';
+    } else if (tgStatus) {
+      tgStatus.innerHTML = '⚠️ Telegram ID yoxdur — bildirişlər sahibinə gedir.';
+    }
+  }
 }
 
 // ── ADMIN ──
@@ -2480,6 +2546,63 @@ async function loadDashPortfolio() {
   const { data:photos } = await db.from('portfolio').select('*').eq('barber_id', currentBarberProfile.id).order('created_at', {ascending:false});
   portfolioUploads = (photos || []).map(p => ({url:p.photo_url, id:p.id}));
   renderDashPortfolio();
+}
+
+// ── CLIENT LOOKUP (separate page) ──
+async function lookupClientBookings() {
+  const phone = sanitizePhone(document.getElementById('clientlookup-phone')?.value.trim()||'');
+  if (!phone || phone.length < 6) { toast('Telefon nömrənizi daxil edin'); return; }
+  const el = document.getElementById('clientlookup-results');
+  el.innerHTML = '<div class="loading">Axtarılır...</div>';
+  const today = getTodayLocal();
+  const now = new Date();
+  const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const { data:bookings } = await db.from('bookings')
+    .select('*,barbers(name,telegram_chat_id),services(name,price)')
+    .eq('client_phone', phone)
+    .order('date', {ascending:false})
+    .limit(20);
+  if (!bookings || bookings.length === 0) {
+    el.innerHTML = '<div class="empty-state">Bu nömrə ilə sifariş tapılmadı.</div>';
+    return;
+  }
+  el.innerHTML = bookings.map(b => {
+    const isPast = b.date < today || (b.date === today && b.time <= nowTime);
+    const statusLabel = b.status === 'cancelled' ? 'Ləğv edildi' : isPast ? 'Keçdi' : 'Gəlir';
+    const statusClass = b.status === 'cancelled' ? 'cancelled' : isPast ? 'passed' : 'upcoming';
+    const canCancel = b.status === 'confirmed' && !isPast;
+    return `<div class="appt-row" style="padding:14px 0">
+      <div>
+        <div class="appt-client" style="font-size:14px;font-weight:600">${sanitize(b.barbers?.name||'Bərbər')}</div>
+        <div class="appt-time">${b.date} · ${b.time} · ${sanitize(b.services?.name||'—')}</div>
+        <div style="font-size:12px;color:var(--green);margin-top:2px">${b.services?.price||0} AZN</div>
+      </div>
+      <div class="appt-actions">
+        <span class="ab ${statusClass}">${statusLabel}</span>
+        ${canCancel?`<button class="cancel-btn" onclick="clientCancelBookingFromLookup('${b.id}','${sanitize(b.barbers?.name||'')}','${b.date}','${b.time}','${phone}')">Ləğv et</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function clientCancelBookingFromLookup(bookingId, barberName, date, time, phone) {
+  cancelTargetId = bookingId;
+  cancelBookingData = {barberName, date, time, clientPhone: phone, fromClientLookup: true};
+  openModal('cancel-modal');
+}
+
+// ── SAVE TELEGRAM ID FROM DASHBOARD ──
+async function saveTelegramId() {
+  if (!currentBarberProfile) { toast('Profil tapılmadı'); return; }
+  const val = document.getElementById('dash-telegram-id')?.value.trim();
+  if (!val || !/^\d+$/.test(val)) { toast('Düzgün Telegram ID daxil edin (yalnız rəqəmlər)'); return; }
+  const { error } = await db.from('barbers').update({ telegram_chat_id: val }).eq('id', currentBarberProfile.id);
+  if (error) { toast('Xəta: ' + error.message); return; }
+  currentBarberProfile.telegram_chat_id = val;
+  document.getElementById('dash-telegram-status').innerHTML = '✅ Telegram ID saxlanıldı! Artıq bildirişlər sizə gələcək.';
+  // Test notification
+  await sendTelegramTo(val, '✅ <b>Kavro.Club</b>\n\nTelegram bildirişləri aktiv edildi! Bundan sonra bütün yeni sifarişlər sizə gələcək.');
+  toast('Telegram ID saxlanıldı!');
 }
 
 // ── UTILS ──
