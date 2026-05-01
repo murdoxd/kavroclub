@@ -905,6 +905,16 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── TELEGRAM NOTIFICATIONS ──
+async function sendTelegramTo(chatId, message) {
+  try {
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' })
+    });
+  } catch(e) { console.log('Telegram error:', e); }
+}
+
 async function sendTelegram(message) {
   try {
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
@@ -1036,7 +1046,7 @@ let cancelBookingData = null;
 let reviewTargetBarberId = null;
 let selectedRating = 0;
 let bState = { barber:null, barberId:null, salonName:null, services:[], time:null, date:0, step:0 };
-let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'', email:'', password:'' };
+let regForm = { name:'', salon:'', city:'', phone:'', specialty:'', about:'', location:'', photoUrl:'', email:'', password:'', telegramId:'' };
 let regServices = [{ n:'Saç kəsimi', p:'10' }, { n:'Saqqal', p:'5' }];
 let activeDays = ['Tue','Wed','Thu','Fri','Sat','Sun'];
 const regDaysAll = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1108,6 +1118,64 @@ const T = {
     'cancel-title':'Sifarişi ləğv et?','cancel-desc':'Bu zaman slotu digər müştərilər üçün azad ediləcək.',
     'fall':'Hamısı','ffavs':'★ Sevimlilər',
     'book-now':'Sifariş et',
+    // Booking flow
+    'step-service':'Xidmət','step-time':'Vaxt','step-confirm':'Təsdiq',
+    'back-barbers':'Bərbərlərə qayıt',
+    'service-label':'Xidmət seçin (birdən çox ola bilər)',
+    'service-selected':'Seçildi','service-total':'Cəmi',
+    'continue-btn':'Davam et','select-one':'Ən az bir xidmət seçin',
+    'pick-datetime':'Tarix və vaxt seçin',
+    'barber-off':'Bu gün bərbər işləmir. Başqa gün seçin.',
+    'confirm-barber':'Bərbər','confirm-salon':'Salon','confirm-services':'Xidmətlər',
+    'confirm-time':'Vaxt','confirm-total':'Cəmi qiymət','confirm-payment':'Ödəniş',
+    'confirm-payment-val':'Salonda nağd və ya kart',
+    'your-name':'Ad Soyad','your-phone':'Telefon nömrəsi',
+    'confirm-btn':'Sifarişi təsdiqlə','back-btn':'Geri',
+    'success-title':'Sifarişiniz qeydə alındı!',
+    'success-sub':'xəbərdar edildi. Tezliklə görüşərik.',
+    'success-note':'Sifarişi ləğv etmək lazım olarsa, "Sifarişimi tap" bölməsindən edə bilərsiniz.',
+    'browse-more':'Daha çox bərbər','back-home':'Ana səhifə',
+    // Register
+    'reg-photo':'Foto (isteğe bağlı)','reg-photo-upload':'Foto yükləyin',
+    'reg-photo-done':'Foto yükləndi ✓','reg-uploading':'Yüklənir...',
+    'reg-name':'Ad Soyad *','reg-salon':'Salon adı *',
+    'reg-email':'Email * (giriş üçün)','reg-password':'Şifrə * (min 6 simvol)',
+    'reg-city':'Şəhər / Rayon *','reg-phone-label':'Telefon *',
+    'reg-location':'Ünvan (xəritə üçün)','reg-specialty':'İxtisas',
+    'reg-about':'Haqqımda (isteğe bağlı)',
+    'reg-telegram':'Telegram ID (bildirişlər üçün)',
+    'reg-telegram-hint':'Telegram-da @userinfobot-a yazın, ID-nizi göndərəcək',
+    'reg-save-continue':'Saxla və davam et →',
+    'reg-workdays':'İş günləri','reg-open':'Açılış vaxtı','reg-close':'Bağlanış vaxtı',
+    'reg-buffer':'Görüşlər arası boşluq','reg-slots-note':'Sistem 30 dəqiqəlik slotlar yaradır.',
+    'reg-add-service':'+ Xidmət əlavə et',
+    'reg-services-note':'Təklif etdiyiniz bütün xidmətləri əlavə edin.',
+    'reg-submit':'Qeydiyyatı göndər','reg-submitting':'Göndərilir...',
+    'reg-plan-mo':'/ ay','reg-plan-sub':'Aylıq abunəlik · istənilən vaxt ləğv edilə bilər',
+    'reg-contact-after':'Qeydiyyatdan sonra hesabınızı aktivləşdirmək üçün bizimlə əlaqə saxlayın:',
+    'reg-activate-note':'Ödəniş təsdiqləndikdən sonra 24 saat ərzində profiliniz aktiv olacaq.',
+    // Dashboard
+    'dash-active':'Aktiv','dash-pending':'Gözləyir — bizimlə əlaqə saxlayın',
+    'dash-no-appts':'Bu gün görüş yoxdur','dash-no-reviews':'Hələ rəy yoxdur','dash-no-bookings':'Hələ sifariş yoxdur',
+    'dash-passed':'Keçdi','dash-upcoming':'Gəlir','dash-cancelled-lbl':'Ləğv edildi',
+    'dash-portfolio-title':'Mənim portfoliom',
+    'dash-portfolio-note':'Ən yaxşı işlərinizin fotolarını yükləyin.',
+    'dash-add-photo':'Foto əlavə et',
+    // Barber card
+    'card-new':'Yeni','card-independent':'Müstəqil','card-map':'Xəritədə gör',
+    'card-from':'AZN-dən',
+    // Profile page
+    'profile-back':'Bərbərlərə qayıt','profile-map':'Xəritədə gör',
+    'profile-book':'Sifariş et','profile-portfolio':'Portfolio','profile-reviews':'Rəylər',
+    'profile-no-portfolio':'Hələ portfolio şəkli yoxdur','profile-no-reviews':'Hələ rəy yoxdur — ilk siz olun!',
+    'profile-leave-review':'Rəy buraxın',
+    // Review phone label
+    'review-phone-label':'Telefon nömrəniz (sifarişi doğrulamaq üçün)',
+    // Lookup
+    'lookup-title':'Sifarişimi tap','lookup-subtitle':'Sifarişinizi ləğv etmək üçün telefon nömrənizi daxil edin',
+    'lookup-search':'Sifarişlərimi axtar','lookup-phone-label':'Telefon nömrəniz',
+    'lookup-not-found':'Bu nömrə ilə sifariş tapılmadı.',
+    'lookup-cancel':'Ləğv et','lookup-passed':'Keçdi','lookup-upcoming':'Gəlir','lookup-cancelled':'Ləğv edildi',
   },
   ru: {
     'hero-tag':'Теперь в Баку, Азербайджан',
@@ -1142,6 +1210,57 @@ const T = {
     'cancel-title':'Отменить запись?','cancel-desc':'Это освободит время для других клиентов.',
     'fall':'Все','ffavs':'★ Избранное',
     'book-now':'Записаться',
+    'step-service':'Услуга','step-time':'Время','step-confirm':'Подтверждение',
+    'back-barbers':'Назад к барберам',
+    'service-label':'Выберите услуги (можно несколько)',
+    'service-selected':'Выбрано','service-total':'Итого',
+    'continue-btn':'Продолжить','select-one':'Выберите хотя бы одну услугу',
+    'pick-datetime':'Выберите дату и время',
+    'barber-off':'Барбер не работает в этот день. Выберите другую дату.',
+    'confirm-barber':'Барбер','confirm-salon':'Салон','confirm-services':'Услуги',
+    'confirm-time':'Время','confirm-total':'Итого','confirm-payment':'Оплата',
+    'confirm-payment-val':'Наличными или картой в салоне',
+    'your-name':'Имя Фамилия','your-phone':'Номер телефона',
+    'confirm-btn':'Подтвердить запись','back-btn':'Назад',
+    'success-title':'Вы записаны!',
+    'success-sub':'уведомлён. До встречи.',
+    'success-note':'Чтобы отменить запись, воспользуйтесь разделом "Найти запись".',
+    'browse-more':'Другие барберы','back-home':'На главную',
+    'reg-photo':'Фото (необязательно)','reg-photo-upload':'Загрузить фото',
+    'reg-photo-done':'Фото загружено ✓','reg-uploading':'Загрузка...',
+    'reg-name':'Имя Фамилия *','reg-salon':'Название салона *',
+    'reg-email':'Email * (для входа)','reg-password':'Пароль * (мин 6 символов)',
+    'reg-city':'Город / Район *','reg-phone-label':'Телефон *',
+    'reg-location':'Адрес (для карты)','reg-specialty':'Специализация',
+    'reg-about':'О себе (необязательно)',
+    'reg-telegram':'Telegram ID (для уведомлений)',
+    'reg-telegram-hint':'Напишите @userinfobot в Telegram, он пришлёт ваш ID',
+    'reg-save-continue':'Сохранить и продолжить →',
+    'reg-workdays':'Рабочие дни','reg-open':'Время открытия','reg-close':'Время закрытия',
+    'reg-buffer':'Перерыв между записями','reg-slots-note':'Система создаёт слоты по 30 минут.',
+    'reg-add-service':'+ Добавить услугу',
+    'reg-services-note':'Добавьте все услуги, которые вы предоставляете.',
+    'reg-submit':'Отправить заявку','reg-submitting':'Отправка...',
+    'reg-plan-mo':'/ мес','reg-plan-sub':'Ежемесячная подписка · отмена в любое время',
+    'reg-contact-after':'После регистрации свяжитесь с нами для активации аккаунта:',
+    'reg-activate-note':'Ваш профиль будет активирован в течение 24 часов после подтверждения оплаты.',
+    'dash-active':'Активен','dash-pending':'На проверке — свяжитесь с нами',
+    'dash-no-appts':'Сегодня записей нет','dash-no-reviews':'Отзывов пока нет','dash-no-bookings':'Записей пока нет',
+    'dash-passed':'Прошло','dash-upcoming':'Предстоит','dash-cancelled-lbl':'Отменено',
+    'dash-portfolio-title':'Моё портфолио',
+    'dash-portfolio-note':'Загрузите фото своих лучших работ.',
+    'dash-add-photo':'Добавить фото',
+    'card-new':'Новый','card-independent':'Независимый','card-map':'На карте',
+    'card-from':'от AZN',
+    'profile-back':'Назад к барберам','profile-map':'На карте',
+    'profile-book':'Записаться','profile-portfolio':'Портфолио','profile-reviews':'Отзывы',
+    'profile-no-portfolio':'Фото работ пока нет','profile-no-reviews':'Отзывов пока нет — будьте первым!',
+    'profile-leave-review':'Оставить отзыв',
+    'review-phone-label':'Ваш номер телефона (для подтверждения записи)',
+    'lookup-title':'Найти запись','lookup-subtitle':'Введите номер телефона чтобы найти вашу запись',
+    'lookup-search':'Найти мои записи','lookup-phone-label':'Ваш номер телефона',
+    'lookup-not-found':'По этому номеру записи не найдены.',
+    'lookup-cancel':'Отменить','lookup-passed':'Прошло','lookup-upcoming':'Предстоит','lookup-cancelled':'Отменено',
   },
   en: {
     'hero-tag':'Now in Baku, Azerbaijan',
@@ -1176,6 +1295,57 @@ const T = {
     'cancel-title':'Cancel booking?','cancel-desc':'This will free up the time slot.',
     'fall':'All','ffavs':'★ Favorites',
     'book-now':'Book appointment',
+    'step-service':'Service','step-time':'Time','step-confirm':'Confirm',
+    'back-barbers':'Back to barbers',
+    'service-label':'Choose services (select one or more)',
+    'service-selected':'Selected','service-total':'Total',
+    'continue-btn':'Continue','select-one':'Select at least one service',
+    'pick-datetime':'Pick a date & time',
+    'barber-off':"Barber doesn't work this day. Please select another date.",
+    'confirm-barber':'Barber','confirm-salon':'Salon','confirm-services':'Services',
+    'confirm-time':'Time','confirm-total':'Total price','confirm-payment':'Payment',
+    'confirm-payment-val':'Cash or card at salon',
+    'your-name':'Full name','your-phone':'Phone number',
+    'confirm-btn':'Confirm booking','back-btn':'Back',
+    'success-title':"You're booked!",
+    'success-sub':'has been notified. See you soon.',
+    'success-note':'To cancel your booking, use the "Find my booking" section.',
+    'browse-more':'Browse more barbers','back-home':'Back to home',
+    'reg-photo':'Photo (optional)','reg-photo-upload':'Upload your photo',
+    'reg-photo-done':'Photo uploaded ✓','reg-uploading':'Uploading...',
+    'reg-name':'Full name *','reg-salon':'Salon name *',
+    'reg-email':'Email * (for login)','reg-password':'Password * (min 6 chars)',
+    'reg-city':'City / District *','reg-phone-label':'Phone *',
+    'reg-location':'Address (for map)','reg-specialty':'Specialty',
+    'reg-about':'About me (optional)',
+    'reg-telegram':'Telegram ID (for notifications)',
+    'reg-telegram-hint':'Message @userinfobot on Telegram — it will send you your ID',
+    'reg-save-continue':'Save & continue →',
+    'reg-workdays':'Working days','reg-open':'Opening time','reg-close':'Closing time',
+    'reg-buffer':'Buffer between appointments','reg-slots-note':'System generates 30-minute slots.',
+    'reg-add-service':'+ Add service',
+    'reg-services-note':'Add every service you offer.',
+    'reg-submit':'Submit registration','reg-submitting':'Submitting...',
+    'reg-plan-mo':'/ month','reg-plan-sub':'Monthly subscription · cancel anytime',
+    'reg-contact-after':'After submitting, contact us to activate your account:',
+    'reg-activate-note':'Your profile goes live within 24 hours of payment confirmation.',
+    'dash-active':'Active','dash-pending':'Pending — contact us to activate',
+    'dash-no-appts':'No appointments today','dash-no-reviews':'No reviews yet','dash-no-bookings':'No bookings yet',
+    'dash-passed':'Passed','dash-upcoming':'Upcoming','dash-cancelled-lbl':'Cancelled',
+    'dash-portfolio-title':'My portfolio',
+    'dash-portfolio-note':'Upload photos of your best work.',
+    'dash-add-photo':'Add photo',
+    'card-new':'New','card-independent':'Independent','card-map':'View on map',
+    'card-from':'from AZN',
+    'profile-back':'Back to barbers','profile-map':'View on map',
+    'profile-book':'Book appointment','profile-portfolio':'Portfolio','profile-reviews':'Reviews',
+    'profile-no-portfolio':'No portfolio photos yet','profile-no-reviews':'No reviews yet — be the first!',
+    'profile-leave-review':'Leave a review',
+    'review-phone-label':'Your phone number (to verify your booking)',
+    'lookup-title':'Find my booking','lookup-subtitle':'Enter your phone number to find your booking',
+    'lookup-search':'Search my bookings','lookup-phone-label':'Your phone number',
+    'lookup-not-found':'No bookings found with this phone number.',
+    'lookup-cancel':'Cancel','lookup-passed':'Passed','lookup-upcoming':'Upcoming','lookup-cancelled':'Cancelled',
   }
 };
 
@@ -1207,12 +1377,139 @@ function setLang(lang, btn) {
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const tr = T[lang];
+
+  // Static element translations via TRANS_MAP
   Object.entries(TRANS_MAP).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el && tr[key]) el.innerHTML = tr[key];
   });
+
+  // Nav buttons
+  const navLabels = {
+    'nb-home':    {az:'Ana səhifə', ru:'Главная',    en:'Home'},
+    'nb-barbers': {az:'Bərbərlər',  ru:'Барберы',   en:'Barbers'},
+    'nb-register':{az:'Bərbərlər üçün', ru:'Для барберов', en:'For barbers'},
+    'nb-login':   {az:'Giriş',      ru:'Войти',      en:'Login'},
+    'nb-dashboard':{az:'Kabinetim', ru:'Кабинет',   en:'Dashboard'},
+  };
+  Object.entries(navLabels).forEach(([id, labels]) => {
+    const el = document.getElementById(id); if (el) el.textContent = labels[lang];
+  });
+
+  // Mobile nav buttons (no IDs, select by position)
+  const mobileLabels = {
+    'mob-login-btn':   {az:'Giriş',         ru:'Войти',          en:'Login'},
+    'mob-dash-btn':    {az:'Kabinetim',      ru:'Кабинет',        en:'Dashboard'},
+    'mob-logout-btn':  {az:'Çıxış',         ru:'Выйти',          en:'Logout'},
+    'mob-register-btn':{az:'Bərbərlər üçün',ru:'Для барберов',   en:'For barbers'},
+    'mob-lookup-btn':  {az:'Sifarişimi tap', ru:'Найти запись',   en:'Find my booking'},
+  };
+  Object.entries(mobileLabels).forEach(([id, labels]) => {
+    const el = document.getElementById(id); if (el) el.textContent = labels[lang];
+  });
+
+  // Search placeholder
   const si = document.getElementById('barber-search');
   if (si) si.placeholder = lang==='az'?'Bərbər, salon axtar...':lang==='ru'?'Поиск барберов...':'Search barbers, salons...';
+
+  // Favs section heading
+  const favsH = document.querySelector('#favs-section h3');
+  if (favsH) favsH.textContent = lang==='az'?'★ Sevimlilər':lang==='ru'?'★ Избранное':'★ Favorites';
+
+  // Footer links
+  const footerLinks = document.querySelectorAll('.footer-link');
+  const footerTexts = {
+    az: ['Məxfilik Siyasəti','İstifadə Şərtləri','Sifarişimi tap'],
+    ru: ['Политика конфиденциальности','Условия использования','Найти запись'],
+    en: ['Privacy Policy','Terms of Use','Find my booking'],
+  };
+  footerLinks.forEach((el, i) => { if (footerTexts[lang][i]) el.textContent = footerTexts[lang][i]; });
+
+  // Profile page static labels
+  const profileStatLabels = document.querySelectorAll('#page-profile .profile-stat .lbl');
+  const profileStats = {
+    az: ['Reytinq','Rəylər','Sifarişlər'],
+    ru: ['Рейтинг','Отзывы','Записи'],
+    en: ['Rating','Reviews','Bookings'],
+  };
+  profileStatLabels.forEach((el, i) => { if (profileStats[lang][i]) el.textContent = profileStats[lang][i]; });
+
+  // Profile back button
+  const profileBack = document.querySelector('#page-profile .back-link span');
+  if (profileBack) profileBack.textContent = tr['back'] || 'Bərbərlərə qayıt';
+
+  // Profile book button
+  const bookBtn = document.querySelector('.book-now-btn');
+  if (bookBtn) bookBtn.textContent = tr['book-now'] || 'Sifariş et';
+
+  // Profile section headings
+  const portfolioH = document.querySelector('.portfolio-section h2');
+  if (portfolioH) portfolioH.textContent = lang==='az'?'Portfolio':lang==='ru'?'Портфолио':'Portfolio';
+  const reviewsH = document.querySelector('.reviews-section h2');
+  if (reviewsH) reviewsH.textContent = lang==='az'?'Rəylər':lang==='ru'?'Отзывы':'Reviews';
+
+  // Lookup page
+  const lookupH = document.querySelector('#page-lookup .page-header h2');
+  if (lookupH) lookupH.textContent = lang==='az'?'Sifarişimi tap':lang==='ru'?'Найти запись':'Find my booking';
+  const lookupP = document.querySelector('#page-lookup .page-header p');
+  if (lookupP) lookupP.textContent = lang==='az'?'Sifarişinizi ləğv etmək üçün telefon nömrənizi daxil edin':lang==='ru'?'Введите номер телефона чтобы найти вашу запись':'Enter your phone number to find your booking';
+  const lookupBack = document.querySelector('#page-lookup .back-link');
+  if (lookupBack) lookupBack.childNodes[lookupBack.childNodes.length-1].textContent = ' '+(lang==='az'?'Ana səhifəyə qayıt':lang==='ru'?'На главную':'Back to home');
+  const lookupBtn = document.querySelector('#page-lookup .btn-main');
+  if (lookupBtn) lookupBtn.textContent = lang==='az'?'Sifarişlərimi axtar':lang==='ru'?'Найти мои записи':'Search my bookings';
+  const lookupPhone = document.querySelector('#page-lookup .fl');
+  if (lookupPhone) lookupPhone.textContent = lang==='az'?'Telefon nömrəniz':lang==='ru'?'Ваш номер телефона':'Your phone number';
+
+  // Dashboard greeting (time-based)
+  const greetHour = new Date().getHours();
+  const greetEl = document.getElementById('t-dash-greet');
+  if (greetEl) {
+    const greets = {
+      az: greetHour<12?'Sabahınız xeyir':greetHour<17?'Günortanız xeyir':'Axşamınız xeyir',
+      ru: greetHour<12?'Доброе утро':greetHour<17?'Добрый день':'Добрый вечер',
+      en: greetHour<12?'Good morning':greetHour<17?'Good afternoon':'Good evening',
+    };
+    greetEl.textContent = greets[lang];
+  }
+
+  // Dashboard status badge
+  const statusBadge = document.getElementById('dash-status-badge');
+  if (statusBadge) {
+    const isActive = statusBadge.classList.contains('inactive') === false;
+    statusBadge.textContent = isActive
+      ? (lang==='az'?'Aktiv':lang==='ru'?'Активен':'Active')
+      : (lang==='az'?'Gözləyir':lang==='ru'?'На проверке':'Pending');
+  }
+
+  // Cancel modal keep/yes buttons
+  const keepBtn = document.querySelector('#cancel-modal .btn-sec');
+  if (keepBtn) keepBtn.textContent = lang==='az'?'Sifarişi saxla':lang==='ru'?'Оставить запись':'Keep booking';
+  const yesBtn = document.querySelector('#cancel-modal .btn-danger');
+  if (yesBtn) yesBtn.textContent = lang==='az'?'Bəli, ləğv et':lang==='ru'?'Да, отменить':'Yes, cancel it';
+
+  // Delete modal buttons
+  const delKeep = document.querySelector('#delete-modal .btn-sec');
+  if (delKeep) delKeep.textContent = lang==='az'?'Ləğv et':lang==='ru'?'Отмена':'Cancel';
+  const delYes = document.querySelector('#delete-modal .btn-delete');
+  if (delYes) delYes.textContent = lang==='az'?'Bəli, sil':lang==='ru'?'Да, удалить':'Yes, delete';
+
+  // Re-render active dynamic pages so inner content translates
+  if (document.getElementById('page-register').classList.contains('active')) {
+    const activeTab = document.querySelector('.rsb.active');
+    if (activeTab) regTab(activeTab.id.replace('rs-',''));
+  }
+  if (document.getElementById('page-login').classList.contains('active')) {
+    const activeLoginTab = document.querySelector('.ltab.active');
+    showLoginTab(activeLoginTab?.id === 'lt-login' ? 'login' : 'signup');
+  }
+  if (document.getElementById('page-booking').classList.contains('active')) {
+    renderBooking();
+  }
+  if (document.getElementById('page-barbers').classList.contains('active')) {
+    renderBarbers();
+    renderFavoritesSection();
+  }
+
   try { sessionStorage.setItem('kavro_lang', lang); } catch(e) {}
 }
 
@@ -1402,24 +1699,31 @@ function setFilter(f,btn) {
 function filterBarbers() { renderBarbers(); }
 
 function buildBarberCard(b) {
+  const tr=T[currentLang];
   const minPrice=b.services?.length?Math.min(...b.services.map(s=>s.price)):null;
   const rating=b.rating||0;
   const photoEl=b.photo_url?`<img src="${b.photo_url}" alt="${sanitize(b.name)}" loading="lazy">`:sanitize(b.name[0]||'?');
   const mapsUrl=b.location?`https://www.google.com/maps/search/${encodeURIComponent(b.location+' Baku')}`:null;
   const isFav = isFavorite(b.id);
+  const favTitle=isFav?(currentLang==='ru'?'Убрать из избранного':currentLang==='en'?'Remove from favorites':'Sevimlilərdən çıxar'):(currentLang==='ru'?'В избранное':currentLang==='en'?'Add to favorites':'Sevimlilərə əlavə et');
+  const independentLabel=tr['card-independent']||'Müstəqil';
+  const allStylesLabel=currentLang==='ru'?'Все стили':currentLang==='en'?'All styles':'Bütün stillər';
+  const newLabel=tr['card-new']||'Yeni';
+  const mapLabel=tr['card-map']||'Xəritədə gör';
+  const priceLabel=minPrice!==null?(currentLang==='ru'?'от '+minPrice+' AZN':currentLang==='en'?'from '+minPrice+' AZN':minPrice+' AZN-dən'):'—';
   return `<div class="barber-card" onclick="openBarberProfile('${b.id}')">
     <div class="bc-photo">${photoEl}
-      <button class="fav-btn ${isFav?'active':''}" onclick="event.stopPropagation();handleFavToggle('${b.id}',this)" title="${isFav?'Sevimlilərdən çıxar':'Sevimlilərə əlavə et'}">${isFav?'★':'☆'}</button>
+      <button class="fav-btn ${isFav?'active':''}" onclick="event.stopPropagation();handleFavToggle('${b.id}',this)" title="${favTitle}">${isFav?'★':'☆'}</button>
     </div>
     <div class="bc-body">
       <div class="bc-name">${sanitize(b.name)}</div>
-      <div class="bc-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>${sanitize(b.salons?.name||'Müstəqil')}</div>
-      <div class="bc-specialty">${sanitize(b.specialty||'Bütün stillər')} · ${sanitize(b.salons?.city||'Bakı')}</div>
+      <div class="bc-salon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>${sanitize(b.salons?.name||independentLabel)}</div>
+      <div class="bc-specialty">${sanitize(b.specialty||allStylesLabel)} · ${sanitize(b.salons?.city||'Bakı')}</div>
       <div class="bc-footer">
-        <div class="bc-rating"><span class="star">★</span>${rating>0?rating.toFixed(1):'Yeni'} (${b.review_count||0})</div>
-        <div class="bc-price">${minPrice!==null?minPrice+' AZN-dən':'—'}</div>
+        <div class="bc-rating"><span class="star">★</span>${rating>0?rating.toFixed(1):newLabel} (${b.review_count||0})</div>
+        <div class="bc-price">${priceLabel}</div>
       </div>
-      ${mapsUrl?`<div style="margin-top:10px"><a class="map-btn" href="${mapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Xəritədə gör</a></div>`:''}
+      ${mapsUrl?`<div style="margin-top:10px"><a class="map-btn" href="${mapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${mapLabel}</a></div>`:''}
     </div>
   </div>`;
 }
@@ -1470,19 +1774,22 @@ function renderStepBar() {
 async function renderBooking() {
   renderStepBar();
   const c=document.getElementById('booking-content');
+  const tr=T[currentLang];
   if (bState.step===0) {
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Xidmət seçin</div><div class="loading">Yüklənir...</div>`;
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — ${tr['service-label']||'Xidmət seçin'}</div><div class="loading">...</div>`;
     const { data:services } = await db.from('services').select('*').eq('barber_id',bState.barberId).order('price');
-    if (!services||services.length===0) { c.innerHTML='<div class="empty-state">Hələ xidmət əlavə edilməyib.</div>'; return; }
+    if (!services||services.length===0) { c.innerHTML='<div class="empty-state">'+(tr['select-one']||'Xidmət yoxdur')+'</div>'; return; }
     const totalPrice = bState.services.reduce((s,sv)=>s+sv.price,0);
+    const selectedLabel = tr['service-selected']||'Seçildi';
     const summaryHtml = bState.services.length > 0
       ? `<div id="svc-summary" style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px">
-          <strong>Seçildi:</strong> ${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join(' + ')} = <strong>${totalPrice} AZN</strong>
+          <strong>${selectedLabel}:</strong> ${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join(' + ')} = <strong>${totalPrice} AZN</strong>
         </div>`
-      : `<div id="svc-summary" style="display:none;background:var(--green-light);border:1px solid var(--green-mid);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--green-dark);margin-bottom:12px"></div>`;
+      : `<div id="svc-summary" style="display:none"></div>`;
     const continueDisabled = bState.services.length === 0;
-    const continueBtnHtml = `<button id="svc-continue" class="btn-main ${continueDisabled?'':'green'}" style="margin-top:16px" ${continueDisabled?'disabled':''} onclick="if(bState.services.length>0){bState.step=1;renderBooking();}">${continueDisabled ? 'Ən az bir xidmət seçin' : 'Davam et — '+totalPrice+' AZN →'}</button>`;
-    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — Xidmət seçin (birdən çox ola bilər)</div>`+
+    const contLabel = continueDisabled ? (tr['select-one']||'Ən az bir xidmət seçin') : (tr['continue-btn']||'Davam et')+' — '+totalPrice+' AZN →';
+    const continueBtnHtml = `<button id="svc-continue" class="btn-main ${continueDisabled?'':'green'}" style="margin-top:16px" ${continueDisabled?'disabled':''} onclick="if(bState.services.length>0){bState.step=1;renderBooking();}">${contLabel}</button>`;
+    c.innerHTML=`<div class="slabel">${sanitize(bState.barber)} — ${tr['service-label']||'Xidmət seçin'}</div>`+
       summaryHtml+
       services.map(sv=>{
         const isSelected = bState.services.some(s=>s.id===sv.id);
@@ -1513,8 +1820,7 @@ async function renderBooking() {
       const isSelected = bState.date===i;
       return `<div class="date-chip ${isSelected?'sel':''} ${!worksThisDay?'taken':''}"
         onclick="${worksThisDay?`bState.date=${i};renderBooking()`:''}"
-        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;':''}"
-        title="${!worksThisDay?'Bərbər bu gün işləmir':''}">
+        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;':''}">
         <div class="dd">${d.d}</div><div class="dn">${d.n}</div>
       </div>`;
     }).join('')}</div>`;
@@ -1528,41 +1834,42 @@ async function renderBooking() {
         onclick="${disabled?'':`pickTime('${t}')`}">${t}</div>`;
     }).join('')}</div>`;
     const selectedDayWorks = workDays.length === 0 || workDays.includes(freshDates[bState.date].d);
-    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">Bu gün bərbər işləmir. Başqa gün seçin.</div>` : '';
-    c.innerHTML=`<div class="slabel">Tarix və vaxt seçin</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← Geri</button>`;
+    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">${tr['barber-off']||'Bu gün bərbər işləmir.'}</div>` : '';
+    const backBtn = tr['back-btn']||'Geri';
+    c.innerHTML=`<div class="slabel">${tr['pick-datetime']||'Tarix və vaxt seçin'}</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← ${backBtn}</button>`;
   } else if (bState.step===2) {
     const dates = getNextDates();
     c.innerHTML=`
       <div class="confirm-card">
-        <div class="cr"><span class="lbl">Bərbər</span><span class="val">${sanitize(bState.barber)}</span></div>
-        <div class="cr"><span class="lbl">Salon</span><span class="val">${sanitize(bState.salonName||'Müstəqil')}</span></div>
-        <div class="cr"><span class="lbl">Xidmətlər</span><span class="val">${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join('<br>')}</span></div>
-        <div class="cr"><span class="lbl">Vaxt</span><span class="val">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n}</span></div>
-        <div class="cr"><span class="lbl">Cəmi qiymət</span><span class="val" style="color:var(--green);font-weight:700;font-size:16px">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
-        <div class="cr" style="border-bottom:none"><span class="lbl">Ödəniş</span><span class="val">Salonda nağd və ya kart</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-barber']||'Bərbər'}</span><span class="val">${sanitize(bState.barber)}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-salon']||'Salon'}</span><span class="val">${sanitize(bState.salonName||(tr['card-independent']||'Müstəqil'))}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-services']||'Xidmətlər'}</span><span class="val">${bState.services.map(s=>s.name+' ('+s.price+' AZN)').join('<br>')}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-time']||'Vaxt'}</span><span class="val">${bState.time} · ${dates[bState.date].d} ${dates[bState.date].n}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-total']||'Cəmi'}</span><span class="val" style="color:var(--green);font-weight:700;font-size:16px">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">${tr['confirm-payment']||'Ödəniş'}</span><span class="val">${tr['confirm-payment-val']||'Salonda nağd və ya kart'}</span></div>
       </div>
-      <div class="fg"><label class="fl">Ad Soyad</label><input class="ff" id="cn" placeholder="məs. Əli Məmmədov" maxlength="100"></div>
-      <div class="fg"><label class="fl">Telefon nömrəsi</label><input class="ff" id="cp" placeholder="+994 50 000 00 00" type="tel" maxlength="20"></div>
+      <div class="fg"><label class="fl">${tr['your-name']||'Ad Soyad'}</label><input class="ff" id="cn" placeholder="${tr['your-name']||'Ad Soyad'}" maxlength="100"></div>
+      <div class="fg"><label class="fl">${tr['your-phone']||'Telefon nömrəsi'}</label><input class="ff" id="cp" placeholder="+994 50 000 00 00" type="tel" maxlength="20"></div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-sec" onclick="bState.step=1;renderBooking()">← Geri</button>
-        <button class="btn-main green" style="flex:1" onclick="confirmBooking()">Sifarişi təsdiqlə</button>
+        <button class="btn-sec" onclick="bState.step=1;renderBooking()">← ${tr['back-btn']||'Geri'}</button>
+        <button class="btn-main green" style="flex:1" onclick="confirmBooking()">${tr['confirm-btn']||'Sifarişi təsdiqlə'}</button>
       </div>`;
   } else if (bState.step===3) {
     const dates = getNextDates();
     c.innerHTML=`<div class="success-screen">
       <div class="success-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
-      <div class="success-title">Sifarişiniz qeydə alındı!</div>
-      <p class="success-sub">${sanitize(bState.barber)} xəbərdar edildi. Tezliklə görüşərik.</p>
+      <div class="success-title">${tr['success-title']||'Sifarişiniz qeydə alındı!'}</div>
+      <p class="success-sub">${sanitize(bState.barber)} ${tr['success-sub']||'xəbərdar edildi.'}</p>
       <div class="confirm-card" style="text-align:left;margin-bottom:18px">
-        <div class="cr"><span class="lbl">Bərbər</span><span class="val">${sanitize(bState.barber)}</span></div>
-        <div class="cr"><span class="lbl">Xidmətlər</span><span class="val">${bState.services.map(s=>s.name).join(', ')}</span></div>
-        <div class="cr"><span class="lbl">Vaxt</span><span class="val">${bState.time} · ${dates[bState.date]?.d||''} ${dates[bState.date]?.n||''}</span></div>
-        <div class="cr" style="border-bottom:none"><span class="lbl">Cəmi</span><span class="val" style="color:var(--green)">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-barber']||'Bərbər'}</span><span class="val">${sanitize(bState.barber)}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-services']||'Xidmətlər'}</span><span class="val">${bState.services.map(s=>s.name).join(', ')}</span></div>
+        <div class="cr"><span class="lbl">${tr['confirm-time']||'Vaxt'}</span><span class="val">${bState.time} · ${dates[bState.date]?.d||''} ${dates[bState.date]?.n||''}</span></div>
+        <div class="cr" style="border-bottom:none"><span class="lbl">${tr['confirm-total']||'Cəmi'}</span><span class="val" style="color:var(--green)">${bState.services.reduce((s,sv)=>s+sv.price,0)} AZN</span></div>
       </div>
-      <div class="notif-note">Sifariş saxlanıldı. Sifarişi ləğv etmək lazım olarsa, "Sifarişimi tap" bölməsindən edə bilərsiniz.</div>
+      <div class="notif-note">${tr['success-note']||'Sifariş saxlanıldı.'}</div>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="btn-sec" onclick="nav('barbers')">Daha çox bərbər</button>
-        <button class="btn-main" style="width:auto;padding:12px 22px" onclick="nav('home')">Ana səhifə</button>
+        <button class="btn-sec" onclick="nav('barbers')">${tr['browse-more']||'Daha çox bərbər'}</button>
+        <button class="btn-main" style="width:auto;padding:12px 22px" onclick="nav('home')">${tr['back-home']||'Ana səhifə'}</button>
       </div>
     </div>`;
   }
@@ -1635,7 +1942,9 @@ async function confirmBooking() {
   }));
   const { error } = await db.from('bookings').insert(bookingRows);
   if (error) { toast('Xəta. Yenidən cəhd edin.'); if(btn){btn.disabled=false;btn.textContent='Sifarişi təsdiqlə';} return; }
-  // Send Telegram notification
+  // Send Telegram notification to barber's own Telegram (or admin fallback)
+  const { data:barberForNotif } = await db.from('barbers').select('telegram_chat_id,name').eq('id',bState.barberId).single();
+  const notifChatId = barberForNotif?.telegram_chat_id || TELEGRAM_CHAT_ID;
   const msg = buildBookingNotification('new', {
     clientName: name,
     clientPhone: phone,
@@ -1645,7 +1954,7 @@ async function confirmBooking() {
     time: bState.time,
     totalPrice: totalPrice
   });
-  await sendTelegram(msg);
+  await sendTelegramTo(notifChatId, msg);
   bState.step=3; renderBooking();
 }
 
@@ -1704,7 +2013,10 @@ async function doCancelBooking() {
     date: b.date || cancelBookingData?.date || '—',
     time: b.time || cancelBookingData?.time || '—'
   });
-  await sendTelegram(msg);
+  // Send to barber's telegram or admin fallback
+  const { data:barberNotif } = await db.from('barbers').select('telegram_chat_id').eq('id', booking?.barber_id||'').maybeSingle();
+  const cancelChatId = barberNotif?.telegram_chat_id || TELEGRAM_CHAT_ID;
+  await sendTelegramTo(cancelChatId, msg);
   // Refresh if on dashboard
   if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
   // Refresh if on lookup
@@ -1793,6 +2105,7 @@ function regTab(tab) {
       <div class="fg"><label class="fl">Ünvan (xəritə üçün)</label><input class="ff" id="rf-location" placeholder="məs. Nizami küç. 45, Bakı" value="${sanitize(regForm.location)}" maxlength="200"></div>
       <div class="fg"><label class="fl">İxtisas</label><input class="ff" id="rf-specialty" placeholder="məs. Feyds, klassik, saqqal" value="${sanitize(regForm.specialty)}" maxlength="100"></div>
       <div class="fg"><label class="fl">Haqqımda (isteğe bağlı)</label><textarea class="ff" id="rf-about" rows="3" placeholder="Təcrübəniz haqqında danışın..." maxlength="500">${sanitize(regForm.about)}</textarea></div>
+      <div class="fg"><label class="fl">Telegram ID (bildirişlər üçün)</label><input class="ff" id="rf-telegram" placeholder="məs. 123456789" value="${sanitize(regForm.telegramId)}" maxlength="50"><p style="font-size:11px;color:var(--gray);margin-top:4px">Telegram-da @userinfobot-a yazın — ID-nizi göndərəcək</p></div>
       <button class="btn-main" onclick="saveProfileTab()">Saxla və davam et →</button>
     </div>`;
   } else if (tab==='schedule') {
@@ -1878,6 +2191,7 @@ function saveProfileTab() {
   regForm.location=sanitize(document.getElementById('rf-location')?.value.trim()||'',200);
   regForm.specialty=sanitize(document.getElementById('rf-specialty')?.value.trim()||'',100);
   regForm.about=sanitize(document.getElementById('rf-about')?.value.trim()||'',500);
+  regForm.telegramId=sanitize(document.getElementById('rf-telegram')?.value.trim()||'',50);
   if (!regForm.name||!regForm.salon||!regForm.city||!regForm.phone) { toast('Bütün məcburi sahələri (*) doldurun'); return; }
   if (!regForm.email||!validateEmail(regForm.email)) { toast('Düzgün email daxil edin'); return; }
   if (!regForm.password||regForm.password.length<6) { toast('Şifrə ən az 6 simvol olmalıdır'); return; }
@@ -1910,14 +2224,14 @@ async function submitRegistration() {
   const endTime = document.getElementById('reg-end')?.value || '22:00';
   const { data:salonData, error:salonErr } = await db.from('salons').insert({ name:regForm.salon, city:regForm.city, phone:regForm.phone, about:regForm.about, status:'pending', from_price:regServices.length?Math.min(...regServices.filter(s=>s.p).map(s=>parseFloat(s.p)||0)):0 }).select().single();
   if (salonErr){toast('Salon xətası: '+(salonErr.message||JSON.stringify(salonErr)));if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}return;}
-  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, email:regForm.email, specialty:regForm.specialty, work_days:activeDays, start_time:startTime, end_time:endTime, buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null }).select().single();
+  const { data:barberData, error:barberErr } = await db.from('barbers').insert({ salon_id:salonData.id, name:regForm.name, email:regForm.email, specialty:regForm.specialty, work_days:activeDays, start_time:startTime, end_time:endTime, buffer_minutes:10, status:'pending', location:regForm.location, rating:0, review_count:0, phone:regForm.phone, photo_url:regForm.photoUrl||null, telegram_chat_id:regForm.telegramId||null }).select().single();
   if (barberErr){toast('Bərbər xətası: '+(barberErr.message||JSON.stringify(barberErr)));if(btn){btn.disabled=false;btn.textContent='Qeydiyyatı göndər';}return;}
   const validSvcs=regServices.filter(s=>s.n&&s.p);
   if (validSvcs.length>0) { await db.from('services').insert(validSvcs.map(s=>({barber_id:barberData.id,name:sanitize(s.n,100),price:parseFloat(s.p),duration_minutes:30}))); }
   // Notify admin via Telegram
   await sendTelegram(`🆕 <b>YENİ BƏRBƏR QEYDİYYATI</b>\n\nAd: ${regForm.name}\nSalon: ${regForm.salon}\nŞəhər: ${regForm.city}\nTelefon: ${regForm.phone}\nEmail: ${regForm.email}\n\nTəsdiq gözlənilir.`);
   toast('Qeydiyyat göndərildi! Aktivləşdirmək üçün WhatsApp-da bizimlə əlaqə saxlayın.');
-  regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'',email:'',password:''};
+  regForm={name:'',salon:'',city:'',phone:'',specialty:'',about:'',location:'',photoUrl:'',email:'',password:'',telegramId:''};
   regServices=[{n:'Saç kəsimi',p:'10'}];
   activeDays=['Tue','Wed','Thu','Fri','Sat','Sun'];
   regTab('profile');
