@@ -124,7 +124,7 @@ DATABASE ADDITIONS NEEDED (run these too):
 <title>Kavro — Bakıda Bərbər Tap və Sifariş Et</title>
 <meta name="description" content="Bakıda ən yaxşı bərbərləri tap və sifariş et. Real vaxt slotları, ani təsdiq.">
 <meta name="theme-color" content="#1a9e6e">
-<link rel="manifest" href="#" id="pwa-manifest-link">
+<link rel="manifest" href="/manifest.json" id="pwa-manifest-link">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
@@ -502,7 +502,7 @@ textarea.ff{resize:vertical;min-height:80px}
 <div class="pwa-banner" id="pwa-banner">
   <div>
     <strong>📱 Tətbiq kimi yüklə</strong>
-    <p>Kavro-nu ana ekrana əlavə et — tez giriş üçün</p>
+    <p>Kavro-nu ana ekrana əlavə et — tez giriş üçün<br><span style="font-size:11px;opacity:0.6">iPhone: Paylaş → Ana ekrana əlavə et</span></p>
   </div>
   <div class="pwa-banner-btns">
     <button class="pwa-install-btn" onclick="installPWA()">Yüklə</button>
@@ -3136,50 +3136,28 @@ function checkAdminHash(){
 
 // ── PWA ──
 function setupPWA() {
-  // Create manifest dynamically
-  const manifest = {
-    name: 'Kavro.Club',
-    short_name: 'Kavro',
-    description: 'Bakıda bərbər tap və sifariş et',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#fafaf8',
-    theme_color: '#1a9e6e',
-    icons: [{
-      src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂</text></svg>",
-      sizes: '192x192',
-      type: 'image/svg+xml'
-    }]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  document.getElementById('pwa-manifest-link').href = url;
-
-  // Register service worker for offline capability
+  // Register real service worker
   if ('serviceWorker' in navigator) {
-    const swCode = `
-      const CACHE = 'kavro-v3';
-      self.addEventListener('install', e => {
-        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/index.html'])));
-      });
-      self.addEventListener('fetch', e => {
-        if (e.request.method !== 'GET') return;
-        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-      });
-    `;
-    const swBlob = new Blob([swCode], {type:'application/javascript'});
-    const swUrl = URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl).catch(()=>{});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
-
-  // PWA install prompt
+  // PWA install prompt (works on Android Chrome automatically over HTTPS)
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     pwaPrompt = e;
-    const dismissed = localStorage.getItem('kavro_pwa_dismissed');
-    if (!dismissed) {
-      setTimeout(() => document.getElementById('pwa-banner').classList.add('show'), 3000);
-    }
+    try {
+      const dismissed = localStorage.getItem('kavro_pwa_dismissed');
+      if (!dismissed) {
+        setTimeout(() => {
+          const banner = document.getElementById('pwa-banner');
+          if (banner) banner.classList.add('show');
+        }, 3000);
+      }
+    } catch(err) {}
+  });
+  window.addEventListener('appinstalled', () => {
+    const banner = document.getElementById('pwa-banner');
+    if (banner) banner.classList.remove('show');
+    pwaPrompt = null;
   });
 }
 
