@@ -89,13 +89,22 @@ DATABASE ADDITIONS NEEDED (run these too):
     created_at timestamp default now()
   );
 
-  -- Clients table (for future client accounts)
+  -- Clients table (REQUIRED - run this!)
   create table if not exists clients (
     id uuid default gen_random_uuid() primary key,
     name text not null,
-    phone text not null unique,
-    email text,
+    phone text not null,
+    email text unique,
     created_at timestamp default now()
+  );
+
+  -- Blocked dates table (REQUIRED - run this!)
+  create table if not exists blocked_dates (
+    id uuid default gen_random_uuid() primary key,
+    barber_id uuid references barbers(id) on delete cascade,
+    date date not null,
+    created_at timestamp default now(),
+    unique(barber_id, date)
   );
 
   -- Favorites table (for logged-in future use, cookies handle anonymous)
@@ -436,6 +445,25 @@ textarea.ff{resize:vertical;min-height:80px}
 .error-banner{background:var(--red-light);border:1px solid #fca5a5;border-radius:9px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px}
 .cancel-btn{background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;color:var(--red);cursor:pointer;transition:all .15s}
 .cancel-btn:hover{background:var(--red-light)}
+/* Client login page */
+.client-login-layout{max-width:400px;margin:0 auto;padding:60px 24px}
+/* Blocked dates */
+.blocked-date-tag{display:inline-flex;align-items:center;gap:6px;background:var(--red-light);color:var(--red);border:1px solid #fca5a5;border-radius:20px;padding:4px 10px;font-size:12px;margin:3px}
+.blocked-date-tag button{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px}
+/* Service edit row */
+.svc-edit-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-border)}
+.svc-edit-row:last-child{border-bottom:none}
+.svc-edit-name{font-size:14px;font-weight:500;flex:2}
+.svc-edit-price{font-size:14px;color:var(--green);font-weight:600;flex:1}
+/* Client history row */
+.client-hist-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-border);cursor:pointer;transition:background .1s}
+.client-hist-row:last-child{border-bottom:none}
+.client-hist-row:hover{background:var(--gray-light);margin:0 -18px;padding:10px 18px}
+.client-badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600}
+.client-badge.new-client{background:#eff6ff;color:#1d4ed8}
+.client-badge.returning{background:var(--green-light);color:var(--green-dark)}
+/* Client detail modal */
+.client-detail-box{background:white;border-radius:var(--radius);padding:26px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
 /* Client cancel booking page */
 .lookup-layout{max-width:500px;margin:0 auto;padding:60px 24px}
 /* Legal pages */
@@ -549,6 +577,17 @@ textarea.ff{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- CLIENT DETAIL MODAL -->
+<div class="modal-backdrop" id="client-detail-modal">
+  <div class="client-detail-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-family:'DM Serif Display',serif;font-size:20px" id="client-detail-name">Müştəri</h3>
+      <button onclick="closeModal('client-detail-modal')" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--gray)">×</button>
+    </div>
+    <div id="client-detail-content"><div class="loading">Yüklənir...</div></div>
+  </div>
+</div>
+
 <!-- TOPBAR -->
 <nav class="topbar">
   <div class="logo" onclick="nav('home')">kavro<span>.club</span></div>
@@ -557,7 +596,9 @@ textarea.ff{resize:vertical;min-height:80px}
     <button class="nav-btn" id="nb-barbers" onclick="nav('barbers')">Bərbərlər</button>
     <button class="nav-btn" id="nb-register" onclick="nav('register')">Bərbərlər üçün</button>
     <button class="nav-btn" id="nb-login" onclick="nav('login')">Bərbər girişi</button>
+    <button class="nav-btn" id="nb-client-login" onclick="nav('clientlogin')">Müştəri girişi</button>
     <button class="nav-btn" id="nb-dashboard" style="display:none" onclick="nav('dashboard')">Kabinetim</button>
+    <button class="nav-btn" id="nb-clientdash" style="display:none" onclick="nav('clientdash')">Sifarişlərim</button>
   </div>
   <div class="topbar-right">
     <div class="lang-switcher">
@@ -579,7 +620,8 @@ textarea.ff{resize:vertical;min-height:80px}
   <button class="mobile-nav-btn" onclick="nav('barbers');closeMobileNav()">Bərbərlər</button>
   <button class="mobile-nav-btn" id="mob-register-btn" onclick="nav('register');closeMobileNav()">Bərbərlər üçün</button>
   <button class="mobile-nav-btn" id="mob-login-btn" onclick="nav('login');closeMobileNav()">Bərbər girişi</button>
-  <button class="mobile-nav-btn" onclick="nav('clientlookup');closeMobileNav()">Sifarişimi tap</button>
+  <button class="mobile-nav-btn" id="mob-client-login-btn" onclick="nav('clientlogin');closeMobileNav()">Müştəri girişi</button>
+  <button class="mobile-nav-btn" id="mob-clientdash-btn" style="display:none" onclick="nav('clientdash');closeMobileNav()">Sifarişlərim</button>
   <button class="mobile-nav-btn" id="mob-dash-btn" style="display:none" onclick="nav('dashboard');closeMobileNav()">Kabinetim</button>
   <button class="mobile-nav-btn" id="mob-logout-btn" style="display:none;color:var(--red)" onclick="logout();closeMobileNav()">Çıxış</button>
 </div>
@@ -592,10 +634,7 @@ textarea.ff{resize:vertical;min-height:80px}
     <p id="t-hero-p">Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.</p>
     <div class="hero-btns">
       <button class="btn-hero-main" onclick="nav('barbers')" id="t-browse-btn">Bərbərlərə bax</button>
-      <button class="btn-hero-sec" onclick="nav('clientlookup')" id="t-barber-btn">Sifarişimi tap</button>
-    </div>
-    <div style="text-align:center;margin-bottom:12px">
-      <button onclick="nav('register')" style="background:transparent;color:rgba(255,255,255,0.5);border:none;font-size:13px;cursor:pointer;text-decoration:underline" id="t-barber-btn-small">Bərbərsiniz? Qeydiyyat / Giriş</button>
+      <button class="btn-hero-sec" onclick="nav('register')" id="t-barber-btn">Mən bərbərəm</button>
     </div>
     <div class="urgent-wrap">
       <button class="urgent-btn" onclick="openModal('urgent-modal')">
@@ -734,9 +773,46 @@ textarea.ff{resize:vertical;min-height:80px}
       <button class="ltab" id="lt-signup" onclick="showLoginTab('signup')">Hesab yarat</button>
     </div>
     <div id="login-content"></div>
-    <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--gray-border);text-align:center">
-      <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Müştərisiniz? Sifarişinizi axtarın və ya ləğv edin</p>
-      <button class="btn-sec" style="width:100%" onclick="nav('lookup')">Sifarişimi tap →</button>
+  </div>
+</div>
+
+<!-- CLIENT LOGIN PAGE -->
+<div class="page" id="page-clientlogin">
+  <div class="login-layout">
+    <h2 class="login-title">Müştəri girişi</h2>
+    <p class="login-sub">Sifarişlərinizi görün, ləğv edin və ya yenidən sifariş edin</p>
+    <div class="login-tabs">
+      <button class="ltab active" id="clt-login" onclick="showClientTab('login')">Daxil ol</button>
+      <button class="ltab" id="clt-signup" onclick="showClientTab('signup')">Qeydiyyat</button>
+    </div>
+    <div id="client-login-content"></div>
+  </div>
+</div>
+
+<!-- CLIENT DASHBOARD PAGE -->
+<div class="page" id="page-clientdash">
+  <div class="dash-layout">
+    <div class="dash-header">
+      <div class="dash-greeting">
+        <p id="client-greet">Xoş gəldiniz</p>
+        <h2 id="client-dash-name">Yüklənir...</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-sec" style="padding:7px 14px;font-size:13px" onclick="clientLogout()">Çıxış</button>
+      </div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Gələcək sifarişlər</div><div class="metric-val" id="client-upcoming-count">—</div></div>
+      <div class="metric"><div class="metric-label">Keçmiş sifarişlər</div><div class="metric-val" id="client-past-count">—</div></div>
+      <div class="metric"><div class="metric-label">Cəmi xərcləndı</div><div class="metric-val" id="client-spent">—</div></div>
+    </div>
+    <div class="dash-card" style="margin-bottom:18px">
+      <h3>📅 Gələcək sifarişlər</h3>
+      <div id="client-upcoming-list"><div class="loading">Yüklənir...</div></div>
+    </div>
+    <div class="dash-card">
+      <h3>🕐 Keçmiş sifarişlər</h3>
+      <div id="client-past-list"><div class="loading">Yüklənir...</div></div>
     </div>
   </div>
 </div>
@@ -797,6 +873,36 @@ textarea.ff{resize:vertical;min-height:80px}
           Foto əlavə et</label>
       </div>
     </div></div>
+    <div style="margin-top:20px"><div class="dash-card">
+      <h3>🚫 Günləri bağla</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">İstirahət, məzuniyyət və ya xəstəlik günlərini bağlayın. O günlər sifariş qəbul edilməyəcək.</p>
+      <div id="blocked-dates-list" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div class="fg" style="flex:1;margin-bottom:0">
+          <label class="fl">Tarix seç</label>
+          <input class="ff" id="block-date-input" type="date" min="">
+        </div>
+        <button class="btn-main" style="width:auto;padding:11px 20px;white-space:nowrap;background:var(--red)" onclick="blockDate()">Bağla</button>
+      </div>
+    </div></div>
+
+    <div style="margin-top:20px"><div class="dash-card">
+      <h3>✂️ Xidmətlərim</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Xidmətlərinizi buradan əlavə edin, redaktə edin və ya silin.</p>
+      <div id="dash-services-list" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input class="ff" id="new-svc-name" placeholder="Xidmət adı" style="flex:2" maxlength="100">
+        <input class="ff" id="new-svc-price" placeholder="AZN" type="number" min="1" max="9999" style="flex:1">
+        <button class="btn-main green" style="width:auto;padding:10px 16px;white-space:nowrap" onclick="addService()">+ Əlavə et</button>
+      </div>
+    </div></div>
+
+    <div style="margin-top:20px"><div class="dash-card">
+      <h3>👥 Müştərilər</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Sizdə sifariş etmiş bütün müştərilər.</p>
+      <div id="dash-clients-list"><div class="loading">Yüklənir...</div></div>
+    </div></div>
+
     <div style="margin-top:20px"><div class="dash-card">
       <h3>📱 Telegram bildirişləri</h3>
       <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">
@@ -1130,7 +1236,7 @@ const T = {
     'hero-tag':'İndi Bakıda, Azərbaycanda',
     'hero-h1':'Növbəti saç kəsiminə<br><em>saniyələrdə</em> yazıl',
     'hero-p':'Yaxınlıqdakı bərbərləri tap, uyğun vaxt seç və gəl.',
-    'browse-btn':'Bərbərlərə bax','barber-btn':'Sifarişimi tap',
+    'browse-btn':'Bərbərlərə bax','barber-btn':'Mən bərbərəm',
     'urgent-text':'İndi dərhal bərbər lazımdır',
     'urgent-title':'İndi bərbər lazımdır','urgent-desc':'Bu gün ən erkən boş slotu tapacağıq.',
     'stat1':'Aktiv bərbərlər','stat2':'Sifarişlər','stat3':'Orta reytinq',
@@ -1174,7 +1280,7 @@ const T = {
     'confirm-btn':'Sifarişi təsdiqlə','back-btn':'Geri',
     'success-title':'Sifarişiniz qeydə alındı!',
     'success-sub':'xəbərdar edildi. Tezliklə görüşərik.',
-    'success-note':'Sifarişi ləğv etmək lazım olarsa, "Sifarişimi tap" bölməsindən edə bilərsiniz.',
+    'success-note':'Sifarişiniz təsdiq edildi. Bərbər sizinlə əlaqə saxlayacaq.',
     'browse-more':'Daha çox bərbər','back-home':'Ana səhifə',
     // Register
     'reg-photo':'Foto (isteğe bağlı)','reg-photo-upload':'Foto yükləyin',
@@ -1222,7 +1328,7 @@ const T = {
     'hero-tag':'Теперь в Баку, Азербайджан',
     'hero-h1':'Запишитесь на стрижку<br>за <em>секунды</em>',
     'hero-p':'Найдите проверенных барберов рядом, выберите время и приходите.',
-    'browse-btn':'Смотреть барберов','barber-btn':'Найти запись',
+    'browse-btn':'Смотреть барберов','barber-btn':'Я барбер',
     'urgent-text':'Мне нужна стрижка прямо сейчас',
     'urgent-title':'Нужна стрижка сейчас','urgent-desc':'Найдём ближайший доступный слот сегодня.',
     'stat1':'Активных барберов','stat2':'Записей сделано','stat3':'Средний рейтинг',
@@ -1265,7 +1371,7 @@ const T = {
     'confirm-btn':'Подтвердить запись','back-btn':'Назад',
     'success-title':'Вы записаны!',
     'success-sub':'уведомлён. До встречи.',
-    'success-note':'Чтобы отменить запись, воспользуйтесь разделом "Найти запись".',
+    'success-note':'Запись подтверждена. Барбер свяжется с вами.',
     'browse-more':'Другие барберы','back-home':'На главную',
     'reg-photo':'Фото (необязательно)','reg-photo-upload':'Загрузить фото',
     'reg-photo-done':'Фото загружено ✓','reg-uploading':'Загрузка...',
@@ -1307,7 +1413,7 @@ const T = {
     'hero-tag':'Now in Baku, Azerbaijan',
     'hero-h1':'Book your next cut<br>in <em>seconds</em>',
     'hero-p':'Find verified barbers near you, pick a time, and show up.',
-    'browse-btn':'Browse barbers','barber-btn':'Find my booking',
+    'browse-btn':'Browse barbers','barber-btn':"I'm a barber",
     'urgent-text':'I need a cut right now',
     'urgent-title':'I need a cut right now','urgent-desc':"We'll find the earliest available slot today.",
     'stat1':'Active barbers','stat2':'Bookings made','stat3':'Average rating',
@@ -1350,7 +1456,7 @@ const T = {
     'confirm-btn':'Confirm booking','back-btn':'Back',
     'success-title':"You're booked!",
     'success-sub':'has been notified. See you soon.',
-    'success-note':'To cancel your booking, use the "Find my booking" section.',
+    'success-note':'Your booking is confirmed. The barber will be in touch.',
     'browse-more':'Browse more barbers','back-home':'Back to home',
     'reg-photo':'Photo (optional)','reg-photo-upload':'Upload your photo',
     'reg-photo-done':'Photo uploaded ✓','reg-uploading':'Uploading...',
@@ -1430,8 +1536,10 @@ function setLang(lang, btn) {
     'nb-home':    {az:'Ana səhifə', ru:'Главная',    en:'Home'},
     'nb-barbers': {az:'Bərbərlər',  ru:'Барберы',   en:'Barbers'},
     'nb-register':{az:'Bərbərlər üçün', ru:'Для барберов', en:'For barbers'},
-    'nb-login':   {az:'Giriş',      ru:'Войти',      en:'Login'},
+    'nb-login':   {az:'Bərbər girişi', ru:'Вход барбера', en:'Barber login'},
+    'nb-client-login':{az:'Müştəri girişi', ru:'Вход клиента', en:'Client login'},
     'nb-dashboard':{az:'Kabinetim', ru:'Кабинет',   en:'Dashboard'},
+    'nb-clientdash':{az:'Sifarişlərim', ru:'Мои записи', en:'My bookings'},
   };
   Object.entries(navLabels).forEach(([id, labels]) => {
     const el = document.getElementById(id); if (el) el.textContent = labels[lang];
@@ -1439,11 +1547,12 @@ function setLang(lang, btn) {
 
   // Mobile nav buttons (no IDs, select by position)
   const mobileLabels = {
-    'mob-login-btn':   {az:'Giriş',         ru:'Войти',          en:'Login'},
-    'mob-dash-btn':    {az:'Kabinetim',      ru:'Кабинет',        en:'Dashboard'},
-    'mob-logout-btn':  {az:'Çıxış',         ru:'Выйти',          en:'Logout'},
-    'mob-register-btn':{az:'Bərbərlər üçün',ru:'Для барберов',   en:'For barbers'},
-    'mob-lookup-btn':  {az:'Sifarişimi tap', ru:'Найти запись',   en:'Find my booking'},
+    'mob-login-btn':      {az:'Bərbər girişi',   ru:'Вход барбера',   en:'Barber login'},
+    'mob-client-login-btn':{az:'Müştəri girişi', ru:'Вход клиента',   en:'Client login'},
+    'mob-dash-btn':       {az:'Kabinetim',       ru:'Кабинет',        en:'Dashboard'},
+    'mob-clientdash-btn': {az:'Sifarişlərim',    ru:'Мои записи',     en:'My bookings'},
+    'mob-logout-btn':     {az:'Çıxış',           ru:'Выйти',          en:'Logout'},
+    'mob-register-btn':   {az:'Bərbərlər üçün',  ru:'Для барберов',   en:'For barbers'},
   };
   Object.entries(mobileLabels).forEach(([id, labels]) => {
     const el = document.getElementById(id); if (el) el.textContent = labels[lang];
@@ -1460,9 +1569,9 @@ function setLang(lang, btn) {
   // Footer links
   const footerLinks = document.querySelectorAll('.footer-link');
   const footerTexts = {
-    az: ['Məxfilik Siyasəti','İstifadə Şərtləri','Sifarişimi tap'],
-    ru: ['Политика конфиденциальности','Условия использования','Найти запись'],
-    en: ['Privacy Policy','Terms of Use','Find my booking'],
+    az: ['Məxfilik Siyasəti','İstifadə Şərtləri'],
+    ru: ['Политика конфиденциальности','Условия использования'],
+    en: ['Privacy Policy','Terms of Use'],
   };
   footerLinks.forEach((el, i) => { if (footerTexts[lang][i]) el.textContent = footerTexts[lang][i]; });
 
@@ -1550,6 +1659,15 @@ function setLang(lang, btn) {
     renderBarbers();
     renderFavoritesSection();
   }
+  if (document.getElementById('page-clientlogin').classList.contains('active')) {
+    showClientTab(document.getElementById('clt-login').classList.contains('active') ? 'login' : 'signup');
+  }
+
+  // Re-apply user pill name (language change can wipe it)
+  if (currentUser && currentBarberProfile) {
+    const pill = document.getElementById('user-pill-name');
+    if (pill) pill.textContent = currentBarberProfile.name || currentUser.email.split('@')[0];
+  }
 
   try { sessionStorage.setItem('kavro_lang', lang); } catch(e) {}
 }
@@ -1557,6 +1675,7 @@ function setLang(lang, btn) {
 // ── NAV ──
 function nav(page) {
   if (page==='dashboard' && !currentUser) { nav('login'); return; }
+  if (page==='clientdash' && !currentClient) { nav('clientlogin'); return; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-'+page);
   if (!el) return;
@@ -1569,9 +1688,10 @@ function nav(page) {
   if (page==='barbers') loadBarbers();
   if (page==='admin') loadAdmin();
   if (page==='dashboard') loadDashboard();
+  if (page==='clientdash') loadClientDashboard();
+  if (page==='clientlogin') showClientTab('login');
   if (page==='register') regTab('profile');
   if (page==='login') showLoginTab('login');
-  if (page==='lookup') { nav('clientlookup'); return; }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
@@ -1583,9 +1703,20 @@ function closeMobileNav() { document.getElementById('mobile-nav').classList.remo
 async function checkAuth() {
   const { data:{session} } = await db.auth.getSession();
   if (session) {
-    currentUser = session.user;
-    await loadBarberProfile();
-    showLoggedInUI();
+    const email = session.user.email;
+    // Check if barber or client
+    const { data:barberCheck } = await db.from('barbers').select('id').eq('email', email).maybeSingle();
+    if (barberCheck) {
+      currentUser = session.user;
+      await loadBarberProfile();
+      showLoggedInUI();
+    } else {
+      // Restore client session
+      const name = session.user.user_metadata?.name || email.split('@')[0];
+      const phone = session.user.user_metadata?.phone || '';
+      currentClient = { email, name, phone, id: session.user.id };
+      showClientLoggedInUI();
+    }
   }
 }
 
@@ -1599,9 +1730,7 @@ function showLoggedInUI() {
   if (!currentUser) return;
   const name = currentBarberProfile?.name || currentUser.email.split('@')[0];
   document.getElementById('nb-login').style.display='none';
-  document.getElementById('nb-register').style.display='none'; // hide "For barbers" when logged in
-  const barbSmall = document.getElementById('t-barber-btn-small');
-  if (barbSmall) barbSmall.style.display='none';
+  document.getElementById('nb-register').style.display='none';
   document.getElementById('nb-dashboard').style.display='inline-flex';
   document.getElementById('user-pill-btn').style.display='flex';
   document.getElementById('user-pill-name').textContent=name;
@@ -1609,19 +1738,27 @@ function showLoggedInUI() {
   document.getElementById('mob-register-btn').style.display='none';
   document.getElementById('mob-dash-btn').style.display='block';
   document.getElementById('mob-logout-btn').style.display='block';
+  // Hide client login from nav when barber is logged in
+  const nbCL = document.getElementById('nb-client-login');
+  if (nbCL) nbCL.style.display='none';
+  const mobCL = document.getElementById('mob-client-login-btn');
+  if (mobCL) mobCL.style.display='none';
 }
 
 function showLoggedOutUI() {
   document.getElementById('nb-login').style.display='inline-flex';
   document.getElementById('nb-register').style.display='inline-flex';
-  const barbSmallOut = document.getElementById('t-barber-btn-small');
-  if (barbSmallOut) barbSmallOut.style.display='';
   document.getElementById('nb-dashboard').style.display='none';
   document.getElementById('user-pill-btn').style.display='none';
   document.getElementById('mob-login-btn').style.display='block';
   document.getElementById('mob-register-btn').style.display='block';
   document.getElementById('mob-dash-btn').style.display='none';
   document.getElementById('mob-logout-btn').style.display='none';
+  // Restore client login button
+  const nbCLO = document.getElementById('nb-client-login');
+  if (nbCLO && !currentClient) nbCLO.style.display='inline-flex';
+  const mobCLO = document.getElementById('mob-client-login-btn');
+  if (mobCLO && !currentClient) mobCLO.style.display='block';
 }
 
 async function logout() {
@@ -1858,15 +1995,21 @@ async function renderBooking() {
     const workDays = barberInfo?.work_days || [];
     const startTime = barberInfo?.start_time || '10:00';
     const endTime = barberInfo?.end_time || '22:00';
+    // Fetch blocked dates for this barber
+    const { data:blockedDates } = await db.from('blocked_dates').select('date').eq('barber_id',bState.barberId);
+    const blockedDatesSet = new Set((blockedDates||[]).map(d=>d.date));
     const { data:booked } = await db.from('bookings').select('time').eq('barber_id',bState.barberId).eq('date',dateStr).eq('status','confirmed');
     const bookedSlots=(booked||[]).map(b=>b.time);
     const barberTimes = generateTimes(startTime, endTime, 30);
     const dateRow=`<div class="date-row">${freshDates.map((d,i)=>{
       const worksThisDay = workDays.length === 0 || workDays.includes(d.d);
+      const isBlocked = blockedDatesSet.has(d.full);
+      const available = worksThisDay && !isBlocked;
       const isSelected = bState.date===i;
-      return `<div class="date-chip ${isSelected?'sel':''} ${!worksThisDay?'taken':''}"
-        onclick="${worksThisDay?`bState.date=${i};renderBooking()`:''}"
-        style="${!worksThisDay?'opacity:0.4;cursor:not-allowed;':''}">
+      return `<div class="date-chip ${isSelected?'sel':''} ${!available?'taken':''}"
+        onclick="${available?`bState.date=${i};renderBooking()`:''}"
+        style="${!available?'opacity:0.4;cursor:not-allowed;':''}"
+        title="${isBlocked?'Bərbər bu günü bağlayıb':!worksThisDay?'Bərbər bu gün işləmir':''}">
         <div class="dd">${d.d}</div><div class="dn">${d.n}</div>
       </div>`;
     }).join('')}</div>`;
@@ -1880,7 +2023,8 @@ async function renderBooking() {
         onclick="${disabled?'':`pickTime('${t}')`}">${t}</div>`;
     }).join('')}</div>`;
     const selectedDayWorks = workDays.length === 0 || workDays.includes(freshDates[bState.date].d);
-    const offDayMsg = !selectedDayWorks ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">${tr['barber-off']||'Bu gün bərbər işləmir.'}</div>` : '';
+    const selectedDayBlocked = blockedDatesSet.has(freshDates[bState.date].full);
+    const offDayMsg = (selectedDayBlocked || !selectedDayWorks) ? `<div style="background:var(--amber-light);border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;font-size:13px;color:#78350f;margin-bottom:14px">${selectedDayBlocked?'Bərbər bu günü bağlayıb. Başqa gün seçin.':(tr['barber-off']||'Bu gün bərbər işləmir.')}</div>` : '';
     const backBtn = tr['back-btn']||'Geri';
     c.innerHTML=`<div class="slabel">${tr['pick-datetime']||'Tarix və vaxt seçin'}</div>${dateRow}${offDayMsg}${timeGrid}<button class="btn-sec" onclick="bState.step=0;renderBooking()">← ${backBtn}</button>`;
   } else if (bState.step===2) {
@@ -2076,6 +2220,7 @@ async function doCancelBooking() {
   // Refresh if on lookup
   if (document.getElementById('page-lookup').classList.contains('active')) lookupBookings();
   if (document.getElementById('page-clientlookup').classList.contains('active')) lookupClientBookings();
+  if (document.getElementById('page-clientdash').classList.contains('active')) loadClientDashboard();
   cancelTargetId = null;
   cancelBookingData = null;
 }
@@ -2357,6 +2502,9 @@ async function loadDashboard() {
     </div>`;
   }).join(''):'<div class="empty-state">Hələ sifariş yoxdur</div>';
   await loadDashPortfolio();
+  await loadBlockedDates();
+  await loadDashServices();
+  await loadClientHistory();
   // Load existing Telegram ID into field
   const tgField = document.getElementById('dash-telegram-id');
   const tgStatus = document.getElementById('dash-telegram-status');
@@ -2548,6 +2696,180 @@ async function loadDashPortfolio() {
   renderDashPortfolio();
 }
 
+// ── CLIENT AUTH ──
+let currentClient = null;
+
+function showClientTab(tab) {
+  document.getElementById('clt-login').classList.toggle('active', tab==='login');
+  document.getElementById('clt-signup').classList.toggle('active', tab==='signup');
+  const c = document.getElementById('client-login-content');
+  if (tab==='login') {
+    c.innerHTML=`
+      <div class="fg"><label class="fl">Email</label><input class="ff" id="cl-email" type="email" placeholder="your@email.com" maxlength="200"></div>
+      <div class="fg"><label class="fl">Şifrə</label><input class="ff" id="cl-pass" type="password" placeholder="Şifrəniz" maxlength="200"></div>
+      <div id="cl-error"></div>
+      <button class="btn-main green" style="margin-top:8px" onclick="clientSignIn()">Daxil ol</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Hesabınız yoxdur? <span style="color:var(--green);cursor:pointer" onclick="showClientTab('signup')">Qeydiyyat</span></p>`;
+  } else {
+    c.innerHTML=`
+      <div class="fg"><label class="fl">Ad Soyad</label><input class="ff" id="cl-name" placeholder="Əli Məmmədov" maxlength="100"></div>
+      <div class="fg"><label class="fl">Telefon nömrəsi</label><input class="ff" id="cl-phone" type="tel" placeholder="+994 50 000 00 00" maxlength="20"></div>
+      <div class="fg"><label class="fl">Email</label><input class="ff" id="cl-reg-email" type="email" placeholder="your@email.com" maxlength="200"></div>
+      <div class="fg"><label class="fl">Şifrə (min 6 simvol)</label><input class="ff" id="cl-reg-pass" type="password" placeholder="Şifrə yarat" maxlength="200"></div>
+      <div id="cl-reg-error"></div>
+      <button class="btn-main green" style="margin-top:8px" onclick="clientSignUp()">Qeydiyyat</button>
+      <p style="text-align:center;font-size:13px;color:var(--gray);margin-top:16px">Hesabınız var? <span style="color:var(--green);cursor:pointer" onclick="showClientTab('login')">Daxil ol</span></p>`;
+  }
+}
+
+async function clientSignIn() {
+  const rl = checkRateLimit('client-login');
+  if (rl.blocked) { document.getElementById('cl-error').innerHTML=`<div class="rate-limit-msg">Çox cəhd. ${rl.waitMins} dəq. gözləyin.</div>`; return; }
+  const email = document.getElementById('cl-email').value.trim();
+  const pass = document.getElementById('cl-pass').value;
+  if (!email||!pass) { toast('Bütün sahələri doldurun'); return; }
+  if (!validateEmail(email)) { toast('Düzgün email daxil edin'); return; }
+  const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
+  if (error) { document.getElementById('cl-error').innerHTML=`<div class="error-banner">${sanitize(error.message)}</div>`; return; }
+  // Check if this is a barber account - if so redirect to barber dashboard
+  const { data:barberCheck } = await db.from('barbers').select('id').eq('email', email).maybeSingle();
+  if (barberCheck) {
+    currentUser = data.user;
+    await loadBarberProfile();
+    showLoggedInUI();
+    toast('Xoş gəldiniz!');
+    nav('dashboard');
+    return;
+  }
+  // It's a client
+  currentClient = { email, name: data.user.user_metadata?.name || email.split('@')[0], phone: data.user.user_metadata?.phone || '', id: data.user.id };
+  showClientLoggedInUI();
+  toast('Xoş gəldiniz!');
+  nav('clientdash');
+}
+
+async function clientSignUp() {
+  const rl = checkRateLimit('client-signup');
+  if (rl.blocked) { document.getElementById('cl-reg-error').innerHTML=`<div class="rate-limit-msg">Çox cəhd. ${rl.waitMins} dəq. gözləyin.</div>`; return; }
+  const name = sanitize(document.getElementById('cl-name')?.value.trim()||'', 100);
+  const phone = sanitizePhone(document.getElementById('cl-phone')?.value.trim()||'');
+  const email = document.getElementById('cl-reg-email')?.value.trim().toLowerCase()||'';
+  const pass = document.getElementById('cl-reg-pass')?.value||'';
+  if (!name||!phone||!email||!pass) { toast('Bütün sahələri doldurun'); return; }
+  if (!validateEmail(email)) { toast('Düzgün email daxil edin'); return; }
+  if (pass.length < 6) { toast('Şifrə ən az 6 simvol olmalıdır'); return; }
+  const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { name, phone } } });
+  if (error) { document.getElementById('cl-reg-error').innerHTML=`<div class="error-banner">${sanitize(error.message)}</div>`; return; }
+  // Save to clients table
+  await db.from('clients').upsert({ name, phone, email }, { onConflict: 'email' });
+  currentClient = { email, name, phone, id: data.user?.id };
+  showClientLoggedInUI();
+  toast('Hesab yaradıldı! Xoş gəldiniz!');
+  nav('clientdash');
+}
+
+function showClientLoggedInUI() {
+  if (!currentClient) return;
+  document.getElementById('nb-client-login').style.display = 'none';
+  document.getElementById('nb-clientdash').style.display = 'inline-flex';
+  document.getElementById('mob-client-login-btn').style.display = 'none';
+  document.getElementById('mob-clientdash-btn').style.display = 'block';
+}
+
+function showClientLoggedOutUI() {
+  document.getElementById('nb-client-login').style.display = 'inline-flex';
+  document.getElementById('nb-clientdash').style.display = 'none';
+  document.getElementById('mob-client-login-btn').style.display = 'block';
+  document.getElementById('mob-clientdash-btn').style.display = 'none';
+}
+
+async function clientLogout() {
+  // Only sign out if the logged in user is the client (not barber)
+  if (!currentBarberProfile) {
+    await db.auth.signOut();
+  }
+  currentClient = null;
+  showClientLoggedOutUI();
+  nav('home');
+  toast('Çıxış edildi');
+}
+
+async function loadClientDashboard() {
+  if (!currentClient) { nav('clientlogin'); return; }
+  const greetHour = new Date().getHours();
+  const greet = greetHour<12?'Sabahınız xeyir':greetHour<17?'Günortanız xeyir':'Axşamınız xeyir';
+  document.getElementById('client-greet').textContent = greet;
+  document.getElementById('client-dash-name').textContent = sanitize(currentClient.name);
+  const today = getTodayLocal();
+  const now = new Date();
+  const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  // Load by phone (most reliable since bookings store phone not user id)
+  const { data:bookings } = await db.from('bookings')
+    .select('*,barbers(id,name,photo_url,salons(name)),services(name,price)')
+    .eq('client_phone', currentClient.phone)
+    .order('date', {ascending:false})
+    .limit(50);
+  if (!bookings) { document.getElementById('client-upcoming-list').innerHTML='<div class="empty-state">Sifariş tapılmadı</div>'; return; }
+  const upcoming = bookings.filter(b => b.status==='confirmed' && (b.date > today || (b.date===today && b.time > nowTime)));
+  const past = bookings.filter(b => b.status!=='confirmed' || b.date < today || (b.date===today && b.time <= nowTime));
+  const totalSpent = bookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.services?.price||0),0);
+  document.getElementById('client-upcoming-count').textContent = upcoming.length;
+  document.getElementById('client-past-count').textContent = past.filter(b=>b.status!=='cancelled').length;
+  document.getElementById('client-spent').textContent = totalSpent + ' AZN';
+  // Render upcoming
+  const upEl = document.getElementById('client-upcoming-list');
+  upEl.innerHTML = upcoming.length ? upcoming.map(b => `
+    <div class="appt-row" style="padding:14px 0;align-items:flex-start">
+      <div style="display:flex;gap:12px;align-items:center;flex:1">
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#1a2a1a,#0d3d28);display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,0.4);flex-shrink:0;overflow:hidden">
+          ${b.barbers?.photo_url?`<img src="${b.barbers.photo_url}" style="width:100%;height:100%;object-fit:cover">`:sanitize((b.barbers?.name||'?')[0])}
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:600">${sanitize(b.barbers?.name||'Bərbər')}</div>
+          <div style="font-size:12px;color:var(--gray)">${sanitize(b.services?.name||'—')} · ${b.date} · ${b.time}</div>
+          <div style="font-size:12px;color:var(--green);font-weight:500">${b.services?.price||0} AZN</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+        <span class="ab upcoming">Gəlir</span>
+        <button style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--green-light);color:var(--green-dark);border:none;cursor:pointer;font-weight:500" onclick="rebookBarber('${b.barbers?.id}','${sanitize(b.barbers?.name||'')}','${sanitize(b.barbers?.salons?.name||'')}')">Yenidən sifariş</button>
+        <button class="cancel-btn" onclick="clientCancelFromDash('${b.id}','${sanitize(b.barbers?.name||'')}','${b.date}','${b.time}')">Ləğv et</button>
+      </div>
+    </div>`).join('') : '<div class="empty-state">Gələcək sifariş yoxdur</div>';
+  // Render past
+  const pastEl = document.getElementById('client-past-list');
+  pastEl.innerHTML = past.length ? past.map(b => {
+    const isCancelled = b.status === 'cancelled';
+    return `
+    <div class="appt-row" style="padding:12px 0;align-items:center">
+      <div style="display:flex;gap:10px;align-items:center;flex:1">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--gray);flex-shrink:0;overflow:hidden">
+          ${b.barbers?.photo_url?`<img src="${b.barbers.photo_url}" style="width:100%;height:100%;object-fit:cover">`:sanitize((b.barbers?.name||'?')[0])}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:500">${sanitize(b.barbers?.name||'Bərbər')}</div>
+          <div style="font-size:11px;color:var(--gray)">${sanitize(b.services?.name||'—')} · ${b.date} · ${b.time} · ${b.services?.price||0} AZN</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <span class="ab ${isCancelled?'cancelled':'passed'}">${isCancelled?'Ləğv edildi':'Keçdi'}</span>
+        ${!isCancelled?`<button style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--green-light);color:var(--green-dark);border:none;cursor:pointer;font-weight:500" onclick="rebookBarber('${b.barbers?.id}','${sanitize(b.barbers?.name||'')}','${sanitize(b.barbers?.salons?.name||'')}')">Yenidən</button>`:''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state">Keçmiş sifariş yoxdur</div>';
+}
+
+function rebookBarber(barberId, barberName, salonName) {
+  if (!barberId) { toast('Bərbər məlumatı tapılmadı'); return; }
+  startBookingBarber(barberId, barberName, salonName);
+}
+
+async function clientCancelFromDash(bookingId, barberName, date, time) {
+  cancelTargetId = bookingId;
+  cancelBookingData = { barberName, date, time, fromClientDash: true };
+  openModal('cancel-modal');
+}
+
 // ── CLIENT LOOKUP (separate page) ──
 async function lookupClientBookings() {
   const phone = sanitizePhone(document.getElementById('clientlookup-phone')?.value.trim()||'');
@@ -2589,6 +2911,193 @@ async function clientCancelBookingFromLookup(bookingId, barberName, date, time, 
   cancelTargetId = bookingId;
   cancelBookingData = {barberName, date, time, clientPhone: phone, fromClientLookup: true};
   openModal('cancel-modal');
+}
+
+// ── BLOCKED DATES ──
+async function loadBlockedDates() {
+  if (!currentBarberProfile) return;
+  // Set min date on input to today
+  const inp = document.getElementById('block-date-input');
+  if (inp) inp.min = getTodayLocal();
+  const { data } = await db.from('blocked_dates')
+    .select('*').eq('barber_id', currentBarberProfile.id)
+    .gte('date', getTodayLocal())
+    .order('date');
+  const el = document.getElementById('blocked-dates-list');
+  if (!el) return;
+  if (!data || data.length === 0) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--gray)">Bağlı gün yoxdur.</p>';
+    return;
+  }
+  el.innerHTML = data.map(d =>
+    `<span class="blocked-date-tag">${d.date}
+      <button onclick="unblockDate('${d.id}','${d.date}')" title="Aç">×</button>
+    </span>`
+  ).join('');
+}
+
+async function blockDate() {
+  if (!currentBarberProfile) return;
+  const val = document.getElementById('block-date-input')?.value;
+  if (!val) { toast('Tarix seçin'); return; }
+  if (val < getTodayLocal()) { toast('Keçmiş tarix seçə bilməzsiniz'); return; }
+  // Check if already blocked
+  const { data:existing } = await db.from('blocked_dates')
+    .select('id').eq('barber_id', currentBarberProfile.id).eq('date', val);
+  if (existing && existing.length > 0) { toast('Bu gün artıq bağlıdır'); return; }
+  const { error } = await db.from('blocked_dates')
+    .insert({ barber_id: currentBarberProfile.id, date: val });
+  if (error) { toast('Xəta: ' + error.message); return; }
+  toast('Gün bağlandı!');
+  document.getElementById('block-date-input').value = '';
+  loadBlockedDates();
+}
+
+async function unblockDate(id, date) {
+  await db.from('blocked_dates').delete().eq('id', id);
+  toast(date + ' açıldı');
+  loadBlockedDates();
+}
+
+// ── SERVICES MANAGEMENT FROM DASHBOARD ──
+async function loadDashServices() {
+  if (!currentBarberProfile) return;
+  const { data } = await db.from('services')
+    .select('*').eq('barber_id', currentBarberProfile.id).order('price');
+  const el = document.getElementById('dash-services-list');
+  if (!el) return;
+  if (!data || data.length === 0) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--gray)">Hələ xidmət yoxdur.</p>';
+    return;
+  }
+  el.innerHTML = data.map(s => `
+    <div class="svc-edit-row">
+      <span class="svc-edit-name">${sanitize(s.name)}</span>
+      <span class="svc-edit-price">${s.price} AZN</span>
+      <button onclick="deleteService('${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--gray);font-size:18px;padding:0 4px" title="Sil">×</button>
+    </div>`).join('');
+}
+
+async function addService() {
+  if (!currentBarberProfile) return;
+  const name = sanitize(document.getElementById('new-svc-name')?.value.trim()||'', 100);
+  const price = parseFloat(document.getElementById('new-svc-price')?.value||'0');
+  if (!name) { toast('Xidmət adı daxil edin'); return; }
+  if (!price || price <= 0) { toast('Düzgün qiymət daxil edin'); return; }
+  const { error } = await db.from('services')
+    .insert({ barber_id: currentBarberProfile.id, name, price, duration_minutes: 30 });
+  if (error) { toast('Xəta: ' + error.message); return; }
+  document.getElementById('new-svc-name').value = '';
+  document.getElementById('new-svc-price').value = '';
+  toast('Xidmət əlavə edildi!');
+  loadDashServices();
+}
+
+async function deleteService(serviceId) {
+  // Check if any upcoming bookings use this service
+  const today = getTodayLocal();
+  const { data:active } = await db.from('bookings')
+    .select('id').eq('service_id', serviceId)
+    .eq('status','confirmed').gte('date', today);
+  if (active && active.length > 0) {
+    toast('Bu xidmətin aktiv sifarişi var, silinə bilməz');
+    return;
+  }
+  await db.from('services').delete().eq('id', serviceId);
+  toast('Xidmət silindi');
+  loadDashServices();
+}
+
+// ── CLIENT HISTORY ──
+async function loadClientHistory() {
+  if (!currentBarberProfile) return;
+  const { data:bookings } = await db.from('bookings')
+    .select('client_name,client_phone,date,services(price)')
+    .eq('barber_id', currentBarberProfile.id)
+    .eq('status','confirmed')
+    .order('date', {ascending:false});
+  const el = document.getElementById('dash-clients-list');
+  if (!el) return;
+  if (!bookings || bookings.length === 0) {
+    el.innerHTML = '<div class="empty-state">Hələ müştəri yoxdur</div>';
+    return;
+  }
+  // Group by phone
+  const clientMap = {};
+  bookings.forEach(b => {
+    const key = b.client_phone;
+    if (!clientMap[key]) {
+      clientMap[key] = { name: b.client_name, phone: b.client_phone, visits: 0, spent: 0, lastVisit: b.date };
+    }
+    clientMap[key].visits++;
+    clientMap[key].spent += b.services?.price || 0;
+    if (b.date > clientMap[key].lastVisit) clientMap[key].lastVisit = b.date;
+  });
+  const clients = Object.values(clientMap).sort((a,b) => b.visits - a.visits);
+  el.innerHTML = clients.map(c => `
+    <div class="client-hist-row" onclick="showClientDetail('${sanitize(c.phone)}','${sanitize(c.name)}')">
+      <div>
+        <div style="font-size:14px;font-weight:600">${sanitize(c.name)}</div>
+        <div style="font-size:12px;color:var(--gray)">${sanitize(c.phone)} · Son ziyarət: ${c.lastVisit}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="client-badge ${c.visits===1?'new-client':'returning'}">${c.visits===1?'Yeni':'${c.visits}x'}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--green)">${c.spent} AZN</span>
+      </div>
+    </div>`).join('');
+  // Fix template literal issue
+  el.innerHTML = el.innerHTML.replace(/\${c\.visits}x/g, '');
+  // Re-render properly
+  el.innerHTML = clients.map(c => `
+    <div class="client-hist-row" onclick="showClientDetail('${sanitize(c.phone)}','${sanitize(c.name)}')">
+      <div>
+        <div style="font-size:14px;font-weight:600">${sanitize(c.name)}</div>
+        <div style="font-size:12px;color:var(--gray)">${sanitize(c.phone)} · Son ziyarət: ${c.lastVisit}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="client-badge ${c.visits===1?'new-client':'returning'}">${c.visits===1?'Yeni':c.visits+'x'}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--green)">${c.spent} AZN</span>
+      </div>
+    </div>`).join('');
+}
+
+async function showClientDetail(phone, name) {
+  document.getElementById('client-detail-name').textContent = sanitize(name);
+  document.getElementById('client-detail-content').innerHTML = '<div class="loading">Yüklənir...</div>';
+  openModal('client-detail-modal');
+  const { data:bookings } = await db.from('bookings')
+    .select('*,services(name,price)')
+    .eq('barber_id', currentBarberProfile.id)
+    .eq('client_phone', phone)
+    .order('date', {ascending:false});
+  if (!bookings || bookings.length === 0) {
+    document.getElementById('client-detail-content').innerHTML = '<div class="empty-state">Sifariş tapılmadı</div>';
+    return;
+  }
+  const totalSpent = bookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.services?.price||0),0);
+  const visits = bookings.filter(b=>b.status==='confirmed').length;
+  document.getElementById('client-detail-content').innerHTML = `
+    <div style="display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+      <div class="metric" style="flex:1;min-width:100px"><div class="metric-label">Ziyarətlər</div><div class="metric-val">${visits}</div></div>
+      <div class="metric" style="flex:1;min-width:100px"><div class="metric-label">Cəmi xərcləndi</div><div class="metric-val">${totalSpent} AZN</div></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <a href="tel:${sanitize(phone)}" style="display:inline-flex;align-items:center;gap:6px;background:var(--green-light);color:var(--green-dark);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none">
+        📞 ${sanitize(phone)}
+      </a>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--gray)">SİFARİŞ TARİXÇƏSİ</div>
+    ${bookings.map(b => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-border);font-size:13px">
+        <div>
+          <div style="font-weight:500">${sanitize(b.services?.name||'—')}</div>
+          <div style="color:var(--gray);font-size:11px">${b.date} · ${b.time}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:var(--green);font-weight:600">${b.services?.price||0} AZN</span>
+          <span class="ab ${b.status==='cancelled'?'cancelled':'confirmed'}">${b.status==='cancelled'?'Ləğv edildi':'Təsdiqləndi'}</span>
+        </div>
+      </div>`).join('')}`;
 }
 
 // ── SAVE TELEGRAM ID FROM DASHBOARD ──
@@ -2706,6 +3215,7 @@ function dismissPWA() {
   loadHomeStats();
   checkAdminHash();
   showLoginTab('login');
+  showClientTab('login');
   regTab('profile');
 
   // Restore page state after refresh
@@ -2717,7 +3227,9 @@ function dismissPWA() {
       await renderBooking();
     } else if (page === 'dashboard' && currentUser) {
       nav('dashboard');
-    } else if (['barbers','register','login','privacy','terms','lookup'].includes(page)) {
+    } else if (page === 'clientdash' && currentClient) {
+      nav('clientdash');
+    } else if (['barbers','register','login','clientlogin','privacy','terms'].includes(page)) {
       nav(page);
     }
   }
