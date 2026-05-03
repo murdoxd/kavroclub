@@ -887,6 +887,30 @@ textarea.ff{resize:vertical;min-height:80px}
       </div>
     </div></div>
     <div style="margin-top:20px"><div class="dash-card">
+      <h3>📅 Cədvəlim</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">İş günlərini və saatlarını dəyişin. Dəyişikliklər dərhal qüvvəyə minir.</p>
+      <div class="fg">
+        <label class="fl">İş günləri</label>
+        <div class="days-wrap" id="schedule-days-wrap"></div>
+      </div>
+      <div class="f2col" style="margin-top:14px">
+        <div class="fg">
+          <label class="fl">Açılış vaxtı</label>
+          <select class="ff" id="schedule-start">
+            <option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option><option>12:00</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Bağlanış vaxtı</label>
+          <select class="ff" id="schedule-end">
+            <option>17:00</option><option>18:00</option><option>19:00</option><option>20:00</option><option>21:00</option><option>22:00</option><option>23:00</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-main green" style="margin-top:4px" onclick="saveSchedule()">Cədvəli saxla</button>
+    </div></div>
+
+    <div style="margin-top:20px"><div class="dash-card">
       <h3>🚫 Günləri bağla</h3>
       <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">İstirahət, məzuniyyət və ya xəstəlik günlərini bağlayın. O günlər sifariş qəbul edilməyəcək.</p>
       <div id="blocked-dates-list" style="margin-bottom:12px"></div>
@@ -2554,6 +2578,7 @@ async function loadDashboard() {
   await loadBlockedDates();
   await loadDashServices();
   await loadClientHistory();
+  loadScheduleEditor();
   // Load existing Telegram ID into field
   const tgField = document.getElementById('dash-telegram-id');
   const tgStatus = document.getElementById('dash-telegram-status');
@@ -2960,6 +2985,71 @@ async function clientCancelBookingFromLookup(bookingId, barberName, date, time, 
   cancelTargetId = bookingId;
   cancelBookingData = {barberName, date, time, clientPhone: phone, fromClientLookup: true};
   openModal('cancel-modal');
+}
+
+// ── SCHEDULE EDITOR ──
+const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_LABELS = {
+  az: {Mon:'Baz.e',Tue:'Çər.a',Wed:'Çər',Thu:'Cüm.a',Fri:'Cüm',Sat:'Şən',Sun:'Baz'},
+  ru: {Mon:'Пн',Tue:'Вт',Wed:'Ср',Thu:'Чт',Fri:'Пт',Sat:'Сб',Sun:'Вс'},
+  en: {Mon:'Mon',Tue:'Tue',Wed:'Wed',Thu:'Thu',Fri:'Fri',Sat:'Sat',Sun:'Sun'}
+};
+
+let scheduleWorkDays = [];
+
+function loadScheduleEditor() {
+  if (!currentBarberProfile) return;
+  scheduleWorkDays = [...(currentBarberProfile.work_days || [])];
+  const wrap = document.getElementById('schedule-days-wrap');
+  if (!wrap) return;
+  const labels = DAY_LABELS[currentLang] || DAY_LABELS['az'];
+  wrap.innerHTML = ALL_DAYS.map(d => `
+    <button class="day-tog ${scheduleWorkDays.includes(d)?'on':''}"
+      onclick="toggleScheduleDay('${d}',this)">${labels[d]||d}</button>
+  `).join('');
+  // Set current times
+  const startEl = document.getElementById('schedule-start');
+  const endEl = document.getElementById('schedule-end');
+  if (startEl) {
+    const cur = currentBarberProfile.start_time || '10:00';
+    Array.from(startEl.options).forEach(o => { if (o.value === cur) o.selected = true; });
+  }
+  if (endEl) {
+    const cur = currentBarberProfile.end_time || '22:00';
+    Array.from(endEl.options).forEach(o => { if (o.value === cur) o.selected = true; });
+  }
+}
+
+function toggleScheduleDay(day, btn) {
+  const idx = scheduleWorkDays.indexOf(day);
+  if (idx > -1) { scheduleWorkDays.splice(idx,1); btn.classList.remove('on'); }
+  else { scheduleWorkDays.push(day); btn.classList.add('on'); }
+}
+
+async function saveSchedule() {
+  if (!currentBarberProfile) return;
+  if (scheduleWorkDays.length === 0) { toast('Ən az bir iş günü seçin'); return; }
+  const startTime = document.getElementById('schedule-start')?.value;
+  const endTime = document.getElementById('schedule-end')?.value;
+  if (startTime >= endTime) { toast('Açılış vaxtı bağlanış vaxtından əvvəl olmalıdır'); return; }
+  const btn = document.querySelector('[onclick="saveSchedule()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saxlanılır...'; }
+  const { error } = await db.from('barbers').update({
+    work_days: scheduleWorkDays,
+    start_time: startTime,
+    end_time: endTime
+  }).eq('id', currentBarberProfile.id);
+  if (error) {
+    toast('Xəta: ' + error.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Cədvəli saxla'; }
+    return;
+  }
+  // Update local profile
+  currentBarberProfile.work_days = scheduleWorkDays;
+  currentBarberProfile.start_time = startTime;
+  currentBarberProfile.end_time = endTime;
+  if (btn) { btn.disabled = false; btn.textContent = 'Cədvəli saxla'; }
+  toast('Cədvəl yeniləndi! ✓');
 }
 
 // ── BLOCKED DATES ──
